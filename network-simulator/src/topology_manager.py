@@ -11,7 +11,7 @@ CRITICAL: All network behavior comes from the Linux kernel.
 """
 
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 from dataclasses import dataclass, field
 import ipaddress
 
@@ -126,13 +126,17 @@ class TopologyManager:
         self.links: Dict[str, TopologyLink] = {}
         self.switches: Dict[str, str] = {}  # switch_name -> bridge_name
     
-    def add_device(self, name: str, device_type: str) -> Device:
+    def add_device(self, name: str, device_type: str, 
+                   ip_address: Optional[str] = None,
+                   subnet_mask: Optional[str] = None) -> Dict[str, Any]:
         """
         Add a device to the topology.
         
         Args:
             name: Device name
             device_type: "host", "router", "switch", or "dns_server"
+            ip_address: Optional manual IP address
+            subnet_mask: Optional subnet mask (default: "255.255.255.0")
         
         Returns:
             Device object
@@ -182,7 +186,15 @@ class TopologyManager:
         
         self.devices[name] = device
         logger.info(f"Added device: {name} (type: {device_type})")
-        return device
+        
+        # Return device info as dict for API compatibility
+        return {
+            "name": name,
+            "type": device_type,
+            "ip_address": ip_address,
+            "subnet_mask": subnet_mask or "255.255.255.0",
+            "status": "active"
+        }
     
     def remove_device(self, name: str):
         """Remove a device from the topology"""
@@ -343,7 +355,16 @@ class TopologyManager:
         
         self.links[link.id] = topo_link
         logger.info(f"Added link: {device_a}:{iface_a} <-> {device_b}:{iface_b}")
-        return topo_link
+        
+        # Return link info as dict for API compatibility
+        return {
+            "id": link.id,
+            "device_a": device_a,
+            "device_b": device_b,
+            "latency_ms": latency_ms,
+            "bandwidth_mbps": bandwidth_mbps,
+            "status": "active"
+        }
     
     def remove_link(self, link_id: str):
         """Remove a link"""
@@ -446,6 +467,88 @@ class TopologyManager:
                 for link in self.links.values()
             ]
         }
+    
+    # ========================================================================
+    # Failure Injection Methods
+    # ========================================================================
+    
+    def block_icmp(self, device_name: str):
+        """Block ICMP packets on a device using iptables"""
+        if device_name not in self.devices:
+            raise ValueError(f"Device '{device_name}' does not exist")
+        
+        self.namespace_manager.block_icmp(device_name)
+        logger.info(f"Blocked ICMP on {device_name}")
+    
+    def unblock_icmp(self, device_name: str):
+        """Unblock ICMP packets on a device"""
+        if device_name not in self.devices:
+            raise ValueError(f"Device '{device_name}' does not exist")
+        
+        self.namespace_manager.unblock_icmp(device_name)
+        logger.info(f"Unblocked ICMP on {device_name}")
+    
+    def enable_silent_router(self, device_name: str):
+        """Enable silent router mode (drop all forwarding)"""
+        if device_name not in self.devices:
+            raise ValueError(f"Device '{device_name}' does not exist")
+        
+        device = self.devices[device_name]
+        if device.device_type != DeviceType.ROUTER:
+            raise ValueError(f"Device '{device_name}' is not a router")
+        
+        self.namespace_manager.enable_silent_router(device_name)
+        logger.info(f"Enabled silent router mode on {device_name}")
+    
+    def disable_silent_router(self, device_name: str):
+        """Disable silent router mode"""
+        if device_name not in self.devices:
+            raise ValueError(f"Device '{device_name}' does not exist")
+        
+        self.namespace_manager.disable_silent_router(device_name)
+        logger.info(f"Disabled silent router mode on {device_name}")
+    
+    def set_interface_down(self, device_name: str, interface: str):
+        """Bring an interface down"""
+        if device_name not in self.devices:
+            raise ValueError(f"Device '{device_name}' does not exist")
+        
+        device = self.devices[device_name]
+        if interface not in device.interfaces:
+            raise ValueError(f"Interface '{interface}' not found on {device_name}")
+        
+        self.namespace_manager.set_interface_down(device_name, interface)
+        logger.info(f"Set interface {interface} down on {device_name}")
+    
+    def set_interface_up(self, device_name: str, interface: str):
+        """Bring an interface up"""
+        if device_name not in self.devices:
+            raise ValueError(f"Device '{device_name}' does not exist")
+        
+        self.namespace_manager.set_interface_up(device_name, interface)
+        logger.info(f"Set interface {interface} up on {device_name}")
+    
+    def enable_packet_loss(self, device_name: str, interface: str, percentage: float):
+        """Enable packet loss on an interface"""
+        if device_name not in self.devices:
+            raise ValueError(f"Device '{device_name}' does not exist")
+        
+        device = self.devices[device_name]
+        if interface not in device.interfaces:
+            raise ValueError(f"Interface '{interface}' not found on {device_name}")
+        
+        self.namespace_manager.enable_packet_loss(device_name, interface, percentage)
+        logger.info(f"Enabled {percentage}% packet loss on {device_name}:{interface}")
+    
+    def get_active_failures(self) -> List[Dict]:
+        """Get list of active failures across all devices"""
+        # This is a simplified version - in a real implementation,
+        # you would track failures in a data structure
+        failures = []
+        
+        # For now, return empty list
+        # In a production system, you'd track failures when they're injected
+        return failures
     
     def cleanup(self):
         """Cleanup all resources"""

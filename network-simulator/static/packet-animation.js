@@ -26,11 +26,118 @@ class PacketAnimationSystem {
         this.useTrails = true; // Show packet trails
         this.trailLength = 5; // Number of trail particles
 
+        // WebSocket for real-time packet events
+        this.packetWebSocket = null;
+        this.connectToPacketStream();
+
         // Start animation loop
         this.startAnimationLoop();
 
         // Create speed control UI
         this.createSpeedControls();
+    }
+
+    /**
+     * Connect to backend WebSocket for real-time packet events
+     */
+    connectToPacketStream() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws/packets`;
+
+        console.log('[PacketAnimation] Connecting to packet stream:', wsUrl);
+
+        this.packetWebSocket = new WebSocket(wsUrl);
+
+        this.packetWebSocket.onopen = () => {
+            console.log('[PacketAnimation] Connected to packet stream');
+        };
+
+        this.packetWebSocket.onmessage = (event) => {
+            try {
+                const packetEvent = JSON.parse(event.data);
+                this.handlePacketEvent(packetEvent);
+            } catch (error) {
+                console.error('[PacketAnimation] Error parsing packet event:', error);
+            }
+        };
+
+        this.packetWebSocket.onerror = (error) => {
+            console.error('[PacketAnimation] WebSocket error:', error);
+        };
+
+        this.packetWebSocket.onclose = () => {
+            console.log('[PacketAnimation] Disconnected from packet stream');
+            // Attempt to reconnect after 5 seconds
+            setTimeout(() => this.connectToPacketStream(), 5000);
+        };
+    }
+
+    /**
+     * Handle incoming packet event from kernel
+     */
+    handlePacketEvent(event) {
+        console.log('[PacketAnimation] Received packet event:', event);
+
+        // Convert kernel packet event to animation format
+        const packet = {
+            id: event.id || `packet-${Date.now()}`,
+            seq: event.sequence || Math.floor(Math.random() * 1000),
+            type: event.packet_type || event.protocol || 'unknown',
+            src: event.src_ip || event.source,
+            dst: event.dst_ip || event.destination,
+            progress: 0,
+            animate: true
+        };
+
+        // Start animation for this packet
+        const key = `${packet.id}-${packet.seq}`;
+        if (!this.activeAnimations.has(key)) {
+            this.createAnimation(packet, key);
+
+            // Animate packet movement
+            this.animatePacketMovement(key, packet);
+        }
+    }
+
+    /**
+     * Animate packet movement from source to destination
+     */
+    animatePacketMovement(key, packet) {
+        const animation = this.activeAnimations.get(key);
+        if (!animation) return;
+
+        const duration = 1000 / this.animationSpeed; // 1 second base duration
+        const startTime = performance.now();
+
+        const updateProgress = () => {
+            const elapsed = performance.now() - startTime;
+            const progress = Math.min(elapsed / duration, 1.0);
+
+            animation.serverProgress = progress;
+
+            if (progress < 1.0) {
+                requestAnimationFrame(updateProgress);
+            } else {
+                animation.completed = true;
+                this.onPacketArrival(packet, animation);
+
+                // Remove after delay
+                setTimeout(() => {
+                    if (animation.element && animation.element.parentNode) {
+                        animation.element.style.transition = 'opacity 0.5s';
+                        animation.element.style.opacity = '0';
+                        setTimeout(() => {
+                            if (animation.element.parentNode) {
+                                animation.element.parentNode.removeChild(animation.element);
+                            }
+                            this.activeAnimations.delete(key);
+                        }, 500);
+                    }
+                }, 1000);
+            }
+        };
+
+        requestAnimationFrame(updateProgress);
     }
 
     /**
