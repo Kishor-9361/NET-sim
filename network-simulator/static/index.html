@@ -830,7 +830,7 @@
 
     <script>
         const API_URL = "http://localhost:8000/api";
-        const WS_URL = "ws://localhost:8000/ws";
+        const WS_URL = "ws://localhost:8000/ws/packets";
 
         // Initialize Vis.js DataSets
         const nodesDataSet = new vis.DataSet();
@@ -868,6 +868,9 @@
         }
 
         async function resetSimulation() {
+            alert("Reset function not yet implemented in new backend");
+            // TODO: Implement reset endpoint in backend
+            return;
             if (!confirm("Are you sure you want to reset the simulation? All custom nodes and links will be lost.")) return;
             try {
                 await fetch(`${API_URL}/control/reset`, { method: 'POST' });
@@ -955,8 +958,28 @@
 
         async function fetchState() {
             try {
-                const response = await fetch(`${API_URL}/state`);
-                const data = await response.json();
+                // Fetch devices and links separately from new API
+                const [devicesResponse, linksResponse] = await Promise.all([
+                    fetch(`${API_URL}/devices`),
+                    fetch(`${API_URL}/links`)
+                ]);
+                const devicesData = await devicesResponse.json();
+                const linksData = await linksResponse.json();
+
+                // Transform to old format for compatibility
+                const data = {
+                    nodes: devicesData.devices.map(d => ({
+                        name: d.name,
+                        type: d.type,
+                        interfaces: [] // Will be populated from topology if needed
+                    })),
+                    links: linksData.links.map(l => ({
+                        id: l.id,
+                        source: l.device_a,
+                        target: l.device_b,
+                        latency_ms: l.latency_ms
+                    }))
+                };
 
                 // Nodes Sync
                 const currentNodes = nodesDataSet.getIds();
@@ -1862,7 +1885,7 @@
             if (!name) return;
 
             try {
-                const response = await fetch(`${API_URL}/topology/node`, {
+                const response = await fetch(`${API_URL}/devices`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, type })
@@ -1879,10 +1902,10 @@
 
         async function createLink(source, target) {
             try {
-                const response = await fetch(`${API_URL}/topology/link`, {
+                const response = await fetch(`${API_URL}/links`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ source_node: source, target_node: target, latency_ms: 10.0 })
+                    body: JSON.stringify({ device_a: source, device_b: target, latency_ms: 10 })
                 });
                 if (!response.ok) {
                     const err = await response.json();
@@ -1900,7 +1923,7 @@
             if (!confirm(`Delete node ${selectedNodeId}?`)) return;
 
             try {
-                await fetch(`${API_URL}/topology/node/${selectedNodeId}`, { method: 'DELETE' });
+                await fetch(`${API_URL}/devices/${selectedNodeId}`, { method: 'DELETE' });
                 clearSelection();
                 fetchState();
             } catch (e) {
@@ -1911,7 +1934,7 @@
         async function deleteSelectedLink(linkId) {
             if (!confirm(`Delete link?`)) return;
             try {
-                await fetch(`${API_URL}/topology/link/${linkId}`, { method: 'DELETE' });
+                await fetch(`${API_URL}/links/${linkId}`, { method: 'DELETE' });
                 clearSelection();
                 fetchState();
             } catch (e) {
