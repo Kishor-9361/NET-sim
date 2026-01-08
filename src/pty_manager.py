@@ -346,6 +346,16 @@ class PTYManager:
             return False
         return self.sessions[session_id].running
     
+    def has_session(self, session_id: str) -> bool:
+        """Check if a session exists"""
+        return session_id in self.sessions
+    
+    def get_session(self, session_id: str) -> PTYSession:
+        """Get a session by ID"""
+        if session_id not in self.sessions:
+            raise ValueError(f"Session '{session_id}' does not exist")
+        return self.sessions[session_id]
+    
     def list_sessions(self) -> list:
         """List all active sessions"""
         return [

@@ -8,6 +8,7 @@ import asyncio
 import logging
 from typing import Dict, List, Optional
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -31,6 +32,15 @@ app = FastAPI(
     title="Network Emulator API",
     description="Kernel-level network emulator with real-time visualization",
     version="1.0.0"
+)
+
+# Add CORS middleware to handle cross-origin requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, DELETE, etc.)
+    allow_headers=["*"],  # Allow all headers
 )
 
 # Global managers
