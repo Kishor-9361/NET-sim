@@ -57,8 +57,8 @@ class LinkManager:
             # Check if tc is available
             subprocess.run(['which', 'tc'], check=True, capture_output=True)
             
-            # Check if bridge utils are available
-            subprocess.run(['which', 'brctl'], check=True, capture_output=True)
+            # Check if bridge command is available (part of iproute2)
+            subprocess.run(['which', 'bridge'], check=True, capture_output=True)
             
             logger.info("Kernel link management support verified")
         except subprocess.CalledProcessError as e:
@@ -124,6 +124,13 @@ class LinkManager:
             return bridge_name
         
         try:
+            # Check if bridge already exists in the system (but not in our dictionary)
+            res = subprocess.run(['ip', 'link', 'show', bridge_name], capture_output=True)
+            if res.returncode == 0:
+                logger.info(f"Bridge '{bridge_name}' already exists in system, using it")
+                self.bridges[bridge_name] = []
+                return bridge_name
+
             logger.info(f"Creating bridge: {bridge_name}")
             
             # Create bridge
@@ -231,8 +238,8 @@ class LinkManager:
             
             # Apply traffic control settings
             if latency_ms > 0 or packet_loss_percent > 0:
-                self._apply_netem(namespace_a, interface_a, latency_ms, packet_loss_percent)
-                self._apply_netem(namespace_b, interface_b, latency_ms, packet_loss_percent)
+                self._apply_netem(namespace_a, interface_a, latency_ms, 0.0, packet_loss_percent)
+                self._apply_netem(namespace_b, interface_b, latency_ms, 0.0, packet_loss_percent)
             
             if bandwidth_mbps:
                 self._apply_bandwidth_limit(namespace_a, interface_a, bandwidth_mbps)
@@ -306,7 +313,7 @@ class LinkManager:
             
             # Apply traffic control
             if latency_ms > 0:
-                self._apply_netem(namespace, interface, latency_ms, 0.0)
+                self._apply_netem(namespace, interface, latency_ms, 0.0, 0.0)
             
             if bandwidth_mbps:
                 self._apply_bandwidth_limit(namespace, interface, bandwidth_mbps)
@@ -337,7 +344,7 @@ class LinkManager:
             raise RuntimeError(f"Switched link creation failed: {e}")
     
     def _apply_netem(self, namespace: str, interface: str, 
-                     latency_ms: float, packet_loss_percent: float):
+                     latency_ms: float, jitter_ms: float, packet_loss_percent: float):
         """
         Apply network emulation (netem) to an interface.
         
@@ -353,13 +360,18 @@ class LinkManager:
             ]
             
             if latency_ms > 0:
-                cmd.extend(['delay', f'{latency_ms}ms'])
+                if jitter_ms > 0:
+                    cmd.extend(['delay', f'{latency_ms}ms', f'{jitter_ms}ms'])
+                else:
+                    cmd.extend(['delay', f'{latency_ms}ms'])
+            elif jitter_ms > 0: # If only jitter is present without base delay
+                cmd.extend(['delay', f'0ms', f'{jitter_ms}ms'])
             
             if packet_loss_percent > 0:
                 cmd.extend(['loss', f'{packet_loss_percent}%'])
             
             logger.info(f"Applying netem to {namespace}:{interface}: "
-                       f"latency={latency_ms}ms, loss={packet_loss_percent}%")
+                       f"latency={latency_ms}ms, jitter={jitter_ms}ms, loss={packet_loss_percent}%")
             
             subprocess.run(cmd, check=True, capture_output=True)
             
@@ -398,34 +410,52 @@ class LinkManager:
             logger.error(f"Failed to apply bandwidth limit: {e.stderr.decode()}")
             raise RuntimeError(f"Bandwidth limit application failed: {e.stderr.decode()}")
     
-    def modify_link_latency(self, link_id: str, latency_ms: float):
-        """Modify link latency"""
+    def update_link(self, link_id: str, 
+                    latency_ms: float, 
+                    jitter_ms: float = 0.0,
+                    bandwidth_mbps: Optional[float] = None, 
+                    packet_loss_percent: float = 0.0):
+        """Update link properties (latency, bandwidth, loss)"""
         if link_id not in self.links:
             raise ValueError(f"Link '{link_id}' does not exist")
         
         link = self.links[link_id]
         
-        # Parse endpoints
-        ns_a, iface_a = link.endpoint_a.split(':')
-        
-        # Update netem
-        try:
-            # Delete existing qdisc
-            subprocess.run([
-                'sudo', 'ip', 'netns', 'exec', ns_a,
-                'tc', 'qdisc', 'del', 'dev', iface_a, 'root'
-            ], capture_output=True)  # Ignore errors
+        # Determine endpoints to update (P2P has two, Switched has one)
+        endpoints = [link.endpoint_a]
+        if link.link_type == LinkType.POINT_TO_POINT:
+            endpoints.append(link.endpoint_b)
             
-            # Apply new latency
-            self._apply_netem(ns_a, iface_a, latency_ms, link.packet_loss_percent)
+        for endpoint in endpoints:
+            if ':' not in endpoint:
+                continue
             
-            link.latency_ms = latency_ms
-            logger.info(f"Updated link latency: {link_id} -> {latency_ms}ms")
+            ns, iface = endpoint.split(':')
             
-        except Exception as e:
-            logger.error(f"Failed to modify link latency: {e}")
-            raise
-    
+            try:
+                # Remove existing qdiscs (ignore errors if none exist)
+                subprocess.run([
+                    'sudo', 'ip', 'netns', 'exec', ns,
+                    'tc', 'qdisc', 'del', 'dev', iface, 'root'
+                ], capture_output=True)
+                
+                # Apply new settings
+                if latency_ms > 0 or packet_loss_percent > 0 or jitter_ms > 0:
+                    self._apply_netem(ns, iface, latency_ms, jitter_ms, packet_loss_percent)
+                
+                if bandwidth_mbps:
+                    self._apply_bandwidth_limit(ns, iface, bandwidth_mbps)
+                
+            except Exception as e:
+                logger.error(f"Failed to update link endpoint {endpoint}: {e}")
+                
+        # Update metadata
+        link.latency_ms = latency_ms
+        link.jitter_ms = jitter_ms
+        link.bandwidth_mbps = bandwidth_mbps
+        link.packet_loss_percent = packet_loss_percent
+        logger.info(f"Updated link {link_id}: {latency_ms}ms +/- {jitter_ms}ms, {bandwidth_mbps}Mbps, {packet_loss_percent}% loss")
+
     def delete_link(self, link_id: str):
         """Delete a link"""
         if link_id not in self.links:
@@ -448,8 +478,14 @@ class LinkManager:
             logger.info(f"Link deleted: {link_id}")
             
         except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to delete link: {e.stderr.decode()}")
-            raise RuntimeError(f"Link deletion failed: {e.stderr.decode()}")
+            err_msg = e.stderr.decode()
+            if "Cannot find device" in err_msg or "Netns not found" in err_msg:
+                logger.warning(f"Interface {iface_a} or namespace {ns_a} not found, assuming deleted")
+                del self.links[link_id]
+                return
+            
+            logger.error(f"Failed to delete link: {err_msg}")
+            raise RuntimeError(f"Link deletion failed: {err_msg}")
     
     def delete_bridge(self, bridge_name: str):
         """Delete a bridge"""
@@ -474,6 +510,40 @@ class LinkManager:
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to delete bridge: {e.stderr.decode()}")
             raise RuntimeError(f"Bridge deletion failed: {e.stderr.decode()}")
+
+    def get_bridge_fdb(self, bridge_name: str) -> List[Dict]:
+        """Get the forwarding database (MAC table) for a bridge"""
+        try:
+            # bridge fdb show br <bridge>
+            result = subprocess.run(
+                ['sudo', 'bridge', 'fdb', 'show', 'br', bridge_name],
+                check=True,
+                capture_output=True
+            )
+            
+            entries = []
+            # Output format: 00:00:00:00:00:00 dev iface [vlan 1] self [permanent]
+            for line in result.stdout.decode().strip().split('\n'):
+                parts = line.split()
+                if len(parts) >= 3:
+                     # Filter out self/permanent entries to show relevant learned MACs
+                     is_static = 'permanent' in line or 'static' in line
+                     is_self = 'self' in parts
+                     
+                     # We want to show learned addresses (typically dynamic) or explicitly static ones,
+                     # but maybe hide the bridge's own MAC usually marked as 'self permanent'
+                     if is_self and is_static:
+                         continue
+                         
+                     entries.append({
+                         'mac': parts[0],
+                         'interface': parts[2],
+                         'type': 'static' if is_static else 'dynamic'
+                     })
+            return entries
+        except Exception as e:
+            logger.error(f"Failed to get FDB for {bridge_name}: {e}")
+            return []
     
     def cleanup_all(self):
         """Delete all links and bridges"""

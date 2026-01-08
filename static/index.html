@@ -4,149 +4,131 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NetSim.io - Professional Network Simulation</title>
-    <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🕸️</text></svg>">
-    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <title>NET-sim</title>
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/storage/default/24px.svg">
 
     <!-- xterm.js for real terminal emulation -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
     <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
 
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
-        rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <!-- vis-network for topology visualization -->
+    <script src="https://unpkg.com/vis-network@9.1.2/standalone/umd/vis-network.min.js"></script>
 
     <style>
-        :root {
-            --bg-dark: #020617;
-            --bg-panel: rgba(15, 23, 42, 0.8);
-            --bg-panel-solid: #0f172a;
-            --bg-input: #020617;
-            --border: rgba(51, 65, 85, 0.5);
-            --primary: #10b981;
-            /* Emerald */
-            --primary-glow: rgba(16, 185, 129, 0.3);
-            --secondary: #6366f1;
-            /* Indigo */
-            --secondary-glow: rgba(99, 102, 241, 0.3);
-            --text-main: #f8fafc;
-            --text-mute: #94a3b8;
-            --danger: #ef4444;
-            --glass-bg: rgba(15, 23, 42, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.05);
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
 
-        * {
-            box-sizing: border-box;
-            -webkit-font-smoothing: antialiased;
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-main: #f1f5f9;
+            --text-mute: #94a3b8;
+            --border: #475569;
+            --primary: #3b82f6;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
         }
 
         body {
-            margin: 0;
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--bg-dark);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
             color: var(--text-main);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Layout */
+        #app {
             display: flex;
             flex-direction: column;
             height: 100vh;
-            overflow: hidden;
         }
 
-        /* Top Navigation Bar */
-        #navbar {
-            height: 64px;
-            background: var(--bg-panel-solid);
+        /* Toolbar */
+        #toolbar {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
             border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
             display: flex;
             align-items: center;
-            padding: 0 24px;
-            justify-content: space-between;
-            z-index: 50;
-            backdrop-filter: blur(8px);
+            gap: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         }
 
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-weight: 800;
-            font-size: 20px;
-            color: #fff;
-            letter-spacing: -0.02em;
-        }
-
-        .brand span {
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
             color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
-        .toolbar {
+        .tools {
             display: flex;
             gap: 8px;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 4px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
+            margin-left: auto;
         }
 
         .tool-btn {
-            background: transparent;
-            border: none;
-            color: var(--text-mute);
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: var(--primary);
             padding: 8px 16px;
             border-radius: 8px;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-family: 'Inter', sans-serif;
+            gap: 6px;
             font-size: 13px;
-            font-weight: 600;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-weight: 500;
+            transition: all 0.2s;
         }
 
         .tool-btn:hover {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.05);
+            background: rgba(59, 130, 246, 0.2);
+            transform: translateY(-1px);
         }
 
         .tool-btn.active {
             background: var(--primary);
-            color: #000;
-            box-shadow: 0 4px 12px var(--primary-glow);
-        }
-
-        .tool-btn i {
-            font-size: 20px;
+            color: white;
+            border-color: var(--primary);
         }
 
         .btn {
             padding: 10px 20px;
-            border-radius: 10px;
             border: none;
-            font-weight: 700;
-            font-size: 14px;
+            border-radius: 8px;
             cursor: pointer;
-            display: flex;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-flex;
             align-items: center;
-            gap: 10px;
-            font-family: 'Inter', sans-serif;
+            gap: 8px;
             transition: all 0.2s;
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary), #0d9488);
+            background: linear-gradient(135deg, var(--primary), #2563eb);
             color: white;
-            border: none;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
         .btn-primary:hover {
             transform: translateY(-1px);
-            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
-            filter: brightness(1.1);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
         }
 
         .btn-danger {
@@ -163,42 +145,20 @@
             filter: brightness(1.1);
         }
 
-        @keyframes pulse-save {
-            0% {
-                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
-            }
-
-            70% {
-                box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
-            }
-
-            100% {
-                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-            }
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
         }
 
-        .btn-save-anim {
-            animation: pulse-save 2s infinite;
-        }
-
-        .btn-secondary {
-            background: var(--secondary);
-            color: #fff;
-            box-shadow: 0 8px 20px -8px var(--secondary);
-        }
-
-        .btn-outline {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text-main);
-        }
-
-        .btn:hover {
+        .btn-success:hover {
             transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
             filter: brightness(1.1);
         }
 
-        /* Main Workspace Layout */
+        /* Workspace */
         #workspace {
             flex: 1;
             display: flex;
@@ -206,207 +166,132 @@
             overflow: hidden;
         }
 
-        /* Network Graph Canvas */
-        #network-graph {
-            flex: 1;
-            background-color: var(--bg-dark);
-            /* Grid Pattern */
-            background-image:
-                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 30px 30px;
-            position: relative;
-        }
-
-        /* Resizers */
-        .resizer-v {
-            width: 4px;
-            cursor: col-resize;
-            background: transparent;
-            transition: background 0.2s;
-            z-index: 100;
-        }
-
-        .resizer-v:hover {
-            background: var(--primary);
-        }
-
-        .resizer-h {
-            height: 4px;
-            cursor: row-resize;
-            background: transparent;
-            transition: background 0.2s;
-            z-index: 100;
-        }
-
-        .resizer-h:hover {
-            background: var(--primary);
-        }
-
-        /* Palette Sidebar */
+        /* Node Palette */
         #node-palette {
-            width: 64px;
-            background: var(--bg-panel);
+            width: 80px;
+            background: var(--bg-secondary);
             border-right: 1px solid var(--border);
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            padding: 16px 8px;
-            z-index: 20;
-            overflow-y: auto;
-            overflow-x: hidden;
-            align-items: center;
-            /* Center icons */
+            gap: 12px;
+            padding: 20px 12px;
         }
 
         .palette-item {
-            width: 40px;
-            height: 40px;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            width: 56px;
+            height: 56px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             cursor: pointer;
-            color: var(--text-mute);
             transition: all 0.2s;
-            flex-shrink: 0;
         }
 
         .palette-item:hover {
-            color: #fff;
-            border-color: var(--primary);
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(59, 130, 246, 0.2);
+            transform: scale(1.05);
         }
 
-        /* Tool Tabs */
-        .panel-tabs {
-            display: flex;
-            border-bottom: 1px solid var(--border);
-            background: #111;
-        }
-
-        .panel-tab {
-            flex: 1;
-            padding: 10px;
-            text-align: center;
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-            color: var(--text-mute);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            border-bottom: 2px solid transparent;
-        }
-
-        .panel-tab.active {
+        .palette-item i {
+            font-size: 28px;
             color: var(--primary);
-            border-bottom-color: var(--primary);
-            background: var(--bg-panel);
         }
 
-        /* Inspection Tables */
-        .inspection-table {
+        /* Canvas */
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            background: var(--bg-primary);
+        }
+
+        #network-canvas {
             width: 100%;
-            border-collapse: collapse;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 11px;
-            margin-top: 10px;
-        }
-
-        .inspection-table th {
-            text-align: left;
-            padding: 4px 8px;
-            color: var(--text-mute);
-            border-bottom: 1px solid var(--border);
-        }
-
-        .inspection-table td {
-            padding: 6px 8px;
-            border-bottom: 1px solid #1f2229;
-        }
-
-        .inspection-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 20px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .inspection-header h4 {
-            margin: 0;
-            font-size: 11px;
-            color: var(--text-mute);
-            text-transform: uppercase;
+            height: 100%;
         }
 
         /* Properties Panel */
         #properties-panel {
-            width: 320px;
-            background: var(--bg-panel);
+            width: 360px;
+            background: var(--bg-secondary);
             border-left: 1px solid var(--border);
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+            /* Header stays fixed, content scrolls */
         }
 
         .panel-header {
-            padding: 20px;
+            padding: 16px 20px;
             border-bottom: 1px solid var(--border);
             display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: space-between;
         }
 
         .panel-title {
             font-size: 16px;
-            font-weight: 700;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .node-badge {
-            font-size: 10px;
-            padding: 4px 8px;
-            background: #2a2e35;
-            border-radius: 4px;
-            color: var(--text-mute);
             font-weight: 600;
-            border: 1px solid var(--border);
         }
 
-        .panel-content {
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-tertiary);
+        }
+
+        .tab {
             flex: 1;
-            padding: 24px;
-            overflow-y: auto;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-mute);
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: var(--bg-secondary);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            /* overflow-y: auto;  Removed to allow parent to scroll */
+            /* flex: 1; Removed so it takes natural height */
+            height: auto;
+        }
+
+        .tab-content.active {
+            display: block;
         }
 
         .input-group {
-            margin-bottom: 20px;
+            margin-bottom: 16px;
         }
 
-        .input-label {
-            font-size: 11px;
-            font-weight: 700;
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
             color: var(--text-mute);
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .styled-input {
             width: 100%;
-            background: var(--bg-input);
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
             border: 1px solid var(--border);
             border-radius: 6px;
-            padding: 12px;
-            color: #fff;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
+            color: var(--text-main);
+            font-size: 14px;
         }
 
         .styled-input:focus {
@@ -414,483 +299,515 @@
             border-color: var(--primary);
         }
 
-        .empty-state {
+        /* Terminal */
+        #terminal-panel {
+            position: fixed;
+            bottom: 0;
+            left: 80px;
+            right: 360px;
+            height: 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            transition: height 0.3s;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        #terminal-panel.open {
+            height: 300px;
+        }
+
+        .terminal-header {
+            padding: 10px 16px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .terminal-content {
+            flex: 1;
+            padding: 12px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            overflow-y: auto;
+            background: #1a1a1a;
+        }
+
+        /* Resizers */
+        .resizer-h {
+            height: 4px;
+            background: var(--border);
+            cursor: ns-resize;
+            position: relative;
+        }
+
+        .resizer-h:hover {
+            background: var(--primary);
+        }
+
+        .resizer-v {
+            width: 4px;
+            background: var(--border);
+            cursor: ew-resize;
+        }
+
+        .resizer-v:hover {
+            background: var(--primary);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 20px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Empty State */
+        #panel-empty {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             height: 100%;
             color: var(--text-mute);
-            text-align: center;
             padding: 40px;
+            text-align: center;
         }
 
-        .empty-state i {
-            font-size: 48px;
+        #panel-empty i {
+            font-size: 64px;
             margin-bottom: 16px;
             opacity: 0.3;
         }
 
-        /* Bottom Terminal Panel */
-        #terminal-panel {
-            height: 350px;
-            background: #000;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        table th {
+            background: var(--bg-tertiary);
+            padding: 8px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-mute);
+            border-bottom: 1px solid var(--border);
+        }
+
+        table td {
+            padding: 8px;
+            font-size: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .actions {
+            padding: 16px 20px;
             border-top: 1px solid var(--border);
-            display: flex;
-            flex-direction: column;
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            /* Full width overlay */
-            transform: translateY(100%);
-            /* Hidden by default */
-            height: 300px;
-            background: rgba(10, 10, 10, 0.98);
-            border-top: 2px solid var(--primary);
-            display: flex;
-            flex-direction: column;
-            z-index: 1000;
-            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.5);
-            transition: transform 0.3s ease-out;
-            backdrop-filter: blur(10px);
-            transform: translateY(100%);
-            /* Hidden by default */
         }
 
-        #terminal-panel.open {
-            transform: translateY(0);
-        }
-
-        .terminal-header {
-            background: #111;
-            padding: 8px 16px;
-            border-bottom: 1px solid #222;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            color: #aaa;
-            user-select: none;
-        }
-
-        .terminal-tab {
-            color: var(--primary);
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-family: 'Outfit', sans-serif;
-            font-size: 13px;
-            letter-spacing: 0.5px;
-        }
-
-        .terminal-tab::before {
-            content: "";
+        /* Custom Scrollbar for better visibility */
+        ::-webkit-scrollbar {
             width: 10px;
             height: 10px;
-            background: #22c55e;
-            border-radius: 50%;
-            display: inline-block;
-            box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
-        }
-
-        .terminal-content {
-            flex: 1;
-            padding: 16px;
-            overflow-y: auto;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
-            color: #e2e8f0;
-            line-height: 1.5;
-            background: #000;
-            cursor: text;
-        }
-
-        .log-entry {
-            margin-bottom: 4px;
-            white-space: pre-wrap;
-            word-break: break-all;
-        }
-
-        .prompt {
-            color: #4ade80;
-            font-weight: 700;
-            white-space: nowrap;
-            margin-right: 8px;
-            /* Standard spacing after prompt */
-            text-shadow: 0 0 8px rgba(74, 222, 128, 0.3);
-            user-select: none;
-            flex-shrink: 0;
-            /* Important: Don't let prompt shrink */
-        }
-
-        .input-line {
-            display: flex;
-            width: 100%;
-            align-items: baseline;
-            /* Align with text baseline */
-            margin-top: 4px;
-        }
-
-        #console-input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: #fff;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
-            outline: none;
-            padding: 0;
-            margin: 0;
-            caret-color: #4ade80;
-            caret-shape: block;
-            /* Some browsers support this */
-        }
-
-        /* Improved blinking block cursor simulation for browsers that don't support caret-shape */
-        #console-input:focus {
-            outline: none;
-        }
-
-        @keyframes cursor-blink {
-
-            0%,
-            100% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0;
-            }
-        }
-
-        /* Text selection color */
-        #console-input::selection {
-            background: rgba(74, 222, 128, 0.4);
-            color: #000;
-        }
-
-        .close-term {
-            margin-left: auto;
-            cursor: pointer;
-            color: #666;
-            transition: color 0.2s;
-        }
-
-        .close-term:hover {
-            color: #ef4444;
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
         }
 
         ::-webkit-scrollbar-track {
-            background: transparent;
+            background: var(--bg-primary);
+            border-left: 1px solid var(--border);
         }
 
         ::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
+            background: var(--border);
+            border-radius: 5px;
+            border: 2px solid var(--bg-primary);
         }
 
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(255, 255, 255, 0.2);
+            background: var(--text-mute);
         }
 
-        .log-entry {
-            margin-bottom: 2px;
-            white-space: pre-wrap;
-            word-break: break-all;
+        /* Dropdown Menu Style */
+        .dropdown {
+            position: relative;
+            display: inline-block;
         }
 
-        .log-error {
-            color: var(--danger);
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            min-width: 160px;
+            border-radius: 8px;
+            z-index: 1000;
+            margin-top: 8px;
+            padding: 8px 0;
+            animation: slideInDropdown 0.2s ease-out;
+        }
+
+        .dropdown-content button {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            padding: 10px 16px;
+            border: none;
+            background: none;
+            color: var(--text-main);
+            text-align: left;
+            cursor: pointer;
+            gap: 10px;
+            font-size: 13px;
+        }
+
+        .dropdown-content button:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .show-menu {
+            display: block;
+        }
+
+        @keyframes slideInDropdown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
 
 <body>
-    <!-- Rest of HTML remains same, just styling updated via root and classes -->
-
-    <!-- Navbar -->
-    <div id="navbar">
-        <div class="brand">
-            <i class="material-icons-round" style="color: var(--primary)">hub</i>
-            NetSim<span>.io</span>
-        </div>
-
-        <div class="toolbar">
-            <button id="tool-select" class="tool-btn active" onclick="switchTool('select')" title="Select Tool">
-                <i class="material-icons-round">near_me</i> Select
-            </button>
-            <button id="tool-link" class="tool-btn" onclick="switchTool('link')" title="Link Tool">
-                <i class="material-icons-round">timeline</i> Link
-            </button>
-            <button id="tool-reset" class="tool-btn" onclick="resetSimulation()" title="Reset Simulation">
-                <i class="material-icons-round">refresh</i> Reset
-            </button>
-            <button id="tool-pan" class="tool-btn" title="Pan Tool" onclick="switchTool('pan')">
-                <i class="material-icons-round">pan_tool</i> Pan
-            </button>
-        </div>
-
-        <div class="actions">
-            <button class="btn btn-primary" onclick="alert('Simulation is running')">
-                <i class="material-icons-round">play_arrow</i> Start Sim
-            </button>
-        </div>
-    </div>
-
-    <!-- Workspace -->
-    <div id="workspace">
-
-        <!-- Node Palette -->
-        <div id="node-palette">
-            <div class="palette-item" title="Add Host" onclick="addNodeToTopology('host')">
-                <i class="material-icons-round">computer</i>
-            </div>
-            <div class="palette-item" title="Add Router" onclick="addNodeToTopology('router')">
-                <i class="material-icons-round">router</i>
-            </div>
-            <div class="palette-item" title="Add Switch" onclick="addNodeToTopology('switch')">
+    <div id="app">
+        <!-- Toolbar -->
+        <div id="toolbar">
+            <div class="logo">
                 <i class="material-icons-round">hub</i>
+                NET-sim
             </div>
-            <div class="palette-item" title="Add DNS Server" onclick="addNodeToTopology('dns_server')">
-                <i class="material-icons-round">dns</i>
+
+            <div class="tools">
+                <button class="tool-btn active" id="tool-select" onclick="switchTool('select')">
+                    <i class="material-icons-round">near_me</i> Select
+                </button>
+                <button class="tool-btn" id="tool-link" onclick="switchTool('link')">
+                    <i class="material-icons-round">timeline</i> Link
+                </button>
+                <button class="tool-btn" id="tool-pan" onclick="switchTool('pan')">
+                    <i class="material-icons-round">pan_tool</i> Pan
+                </button>
+            </div>
+
+            <!-- Physics Controls -->
+            <div
+                style="display: flex; align-items: center; gap: 16px; margin-left: 20px; border-left: 1px solid var(--border); padding-left: 20px; margin-right: 20px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <i class="material-icons-round" style="color: var(--text-mute); font-size: 18px;">linear_scale</i>
+                    <label style="font-size: 11px; color: var(--text-mute); white-space: nowrap;">Link Length</label>
+                </div>
+                <input type="range" min="50" max="400" value="150" id="link-length-slider"
+                    oninput="updatePhysicsSettings(this.value)"
+                    style="width: 120px; height: 4px; accent-color: var(--primary); cursor: pointer;">
+            </div>
+
+            <div class="actions" style="display: flex; gap: 8px; padding: 0 20px; border: none; margin-left: auto;">
+                <button class="tool-btn" onclick="autoConfigureRouting()"
+                    style="background: rgba(139, 92, 246, 0.1); border-color: rgba(139, 92, 246, 0.3); color: var(--secondary);">
+                    <i class="material-icons-round">alt_route</i> Route
+                </button>
+                <div class="dropdown">
+                    <button class="tool-btn"
+                        onclick="document.getElementById('sys-menu').classList.toggle('show-menu')">
+                        <i class="material-icons-round">more_vert</i> Menu
+                    </button>
+                    <div id="sys-menu" class="dropdown-content">
+                        <button onclick="window.location.reload()">
+                            <i class="material-icons-round" style="color: #0ea5e9;">refresh</i> Refresh
+                        </button>
+                        <button onclick="resetTopology()">
+                            <i class="material-icons-round" style="color: #ef4444;">delete_sweep</i> Reset
+                        </button>
+                        <div style="height: 1px; background: var(--border); margin: 4px 0;"></div>
+                        <button onclick="shutdownServer()" style="color: #ef4444;">
+                            <i class="material-icons-round">power_settings_new</i> Shutdown
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="resizer-v" id="left-resizer"></div>
+        <!-- Workspace -->
+        <div id="workspace">
+            <!-- Node Palette -->
+            <div id="node-palette">
+                <div class="palette-item" title="Add Host" onclick="addNodeToTopology('host')">
+                    <i class="material-icons-round">computer</i>
+                </div>
+                <div class="palette-item" title="Add Router" onclick="addNodeToTopology('router')">
+                    <i class="material-icons-round">router</i>
+                </div>
+                <div class="palette-item" title="Add Switch" onclick="addNodeToTopology('switch')">
+                    <i class="material-icons-round">hub</i>
+                </div>
+                <div class="palette-item" title="Add DNS Server" onclick="addNodeToTopology('dns_server')">
+                    <i class="material-icons-round">dns</i>
+                </div>
+                <div class="palette-item" title="Add Server" onclick="addNodeToTopology('server')">
+                    <i class="material-icons-round">storage</i>
+                </div>
 
-        <!-- Graph Area -->
-        <div id="network-graph"></div>
+                <div style="height: 1px; background: var(--border); margin: 8px 4px;"></div>
 
-        <div class="resizer-v" id="sidebar-resizer"></div>
-
-        <!-- Properties Panel (Right) -->
-        <div id="properties-panel">
-            <div id="panel-empty" class="empty-state">
-                <i class="material-icons-round">settings_input_component</i>
-                <div style="font-weight: 600; margin-bottom: 5px;">No Selection</div>
-                <div style="font-size: 13px;">Select a node from the topology map to view and edit its properties.</div>
+                <div class="palette-item" title="Star Topology" onclick="createTopology('star')">
+                    <i class="material-icons-round">hub</i>
+                </div>
+                <div class="palette-item" title="Mesh Topology" onclick="createTopology('mesh')">
+                    <i class="material-icons-round">share</i>
+                </div>
+                <div class="palette-item" title="Ring Topology" onclick="createTopology('ring')">
+                    <i class="material-icons-round">sync</i>
+                </div>
+                <div class="palette-item" title="Bus Topology" onclick="createTopology('bus')">
+                    <i class="material-icons-round">linear_scale</i>
+                </div>
             </div>
 
-            <div id="panel-content" style="display: none;">
+            <div class="resizer-v" id="left-resizer"></div>
+
+            <!-- Canvas -->
+            <div id="canvas-container">
+                <div id="network-canvas"></div>
+            </div>
+
+            <div class="resizer-v" id="sidebar-resizer"></div>
+
+            <!-- Properties Panel -->
+            <div id="properties-panel">
                 <div class="panel-header">
-                    <div class="panel-title">
-                        <i class="material-icons-round" style="color: var(--primary)">tune</i> Properties
-                    </div>
-                    <span class="node-badge" id="prop-type-badge">HOST</span>
+                    <span class="panel-title">Control Panel</span>
                 </div>
 
-                <div class="panel-tabs">
-                    <div class="panel-tab active" id="tab-props" onclick="switchTab('props')">Properties</div>
-                    <div class="panel-tab" id="tab-inspect" onclick="switchTab('inspect')">Inspect</div>
-                    <div class="panel-tab" id="tab-fault" onclick="switchTab('fault')">Corruption</div>
-                    <div class="panel-tab" id="tab-monitor" onclick="switchTab('monitor')">Monitor</div>
+                <div id="panel-empty">
+                    <i class="material-icons-round">info</i>
+                    <p>Select a node or link to view properties</p>
                 </div>
 
-                <div class="panel-content" id="content-props">
-                    <div class="input-group">
-                        <div class="input-label">Node ID</div>
-                        <div style="font-size: 12px; color: #666; font-family: 'JetBrains Mono';" id="prop-id">
-                            node-12345</div>
+                <div id="panel-content" style="display: none; flex-direction: column; height: 100%; overflow-y: auto;">
+                    <div class="tabs">
+                        <div class="tab active" id="tab-props" onclick="switchTab('props')">Properties</div>
+                        <div class="tab" id="tab-inspect" onclick="switchTab('inspect')">Inspect</div>
+                        <div class="tab" id="tab-corruption" onclick="switchTab('corruption')">Corruption</div>
+                        <div class="tab" id="tab-monitor" onclick="switchTab('monitor')">Monitor</div>
                     </div>
 
-                    <div class="input-group">
-                        <div class="input-label">Hostname</div>
-                        <input type="text" class="styled-input" id="prop-hostname" value="host-1">
-                    </div>
-
-                    <div class="input-group">
-                        <div class="input-label">Default Gateway</div>
-                        <input type="text" class="styled-input" id="prop-gateway" value="">
-                    </div>
-
-                    <div class="input-group">
-                        <div class="input-label">Interfaces</div>
-                        <div id="prop-interfaces" style="display: flex; flex-direction: column; gap: 8px;">
-                            <!-- populated by js -->
+                    <!-- Properties Tab -->
+                    <div class="tab-content active" id="content-props" style="flex: 1; overflow-y: auto;">
+                        <div class="input-group">
+                            <label>Type</label>
+                            <span id="prop-type-badge"
+                                style="display: inline-block; padding: 4px 12px; background: var(--primary); border-radius: 4px; font-size: 11px; font-weight: 600;">HOST</span>
+                        </div>
+                        <div class="input-group">
+                            <label>ID</label>
+                            <input type="text" class="styled-input" id="prop-id" readonly>
+                        </div>
+                        <div class="input-group">
+                            <label>Hostname</label>
+                            <input type="text" class="styled-input" id="prop-hostname">
+                        </div>
+                        <div class="input-group">
+                            <label>Default Gateway</label>
+                            <input type="text" class="styled-input" id="prop-gateway">
+                        </div>
+                        <div class="input-group">
+                            <label>Interfaces</label>
+                            <div id="prop-interfaces"></div>
                         </div>
                     </div>
 
-                    <button class="btn btn-primary btn-save-anim"
-                        style="width: 100%; margin-top: 12px; height: 32px; font-size: 12px;"
-                        onclick="saveNodeProperties()">
-                        <i class="material-icons-round" style="font-size: 16px;">save</i> Save Changes
-                    </button>
-                </div>
+                    <!-- Inspect Tab -->
+                    <div class="tab-content" id="content-inspect" style="flex: 1; overflow-y: auto;">
+                        <h4 style="margin-bottom: 12px;">ARP Cache</h4>
+                        <table id="arp-table">
+                            <thead>
+                                <tr>
+                                    <th>IP</th>
+                                    <th>MAC</th>
+                                    <th>Age</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
 
-                <div class="panel-content" id="content-inspect" style="display: none;">
-                    <div class="inspection-header">
-                        <h4>ARP Cache</h4>
-                    </div>
-                    <table class="inspection-table" id="arp-table">
-                        <thead>
-                            <tr>
-                                <th>IP Address</th>
-                                <th>MAC</th>
-                                <th>Age</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                        <h4 style="margin: 20px 0 12px;">Routing Table</h4>
+                        <table id="route-table">
+                            <thead>
+                                <tr>
+                                    <th>Destination</th>
+                                    <th>Gateway</th>
+                                    <th>Interface</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
 
-                    <div class="inspection-header">
-                        <h4>Routing Table</h4>
-                    </div>
-                    <table class="inspection-table" id="route-table">
-                        <thead>
-                            <tr>
-                                <th>Target</th>
-                                <th>Gateway</th>
-                                <th>Iface</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
+                        <h4 style="margin: 20px 0 12px;">Active Sockets</h4>
+                        <table id="socket-table">
+                            <thead>
+                                <tr>
+                                    <th>Proto</th>
+                                    <th>Local</th>
+                                    <th>Remote</th>
+                                    <th>State</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
 
-                    <div class="inspection-header">
-                        <h4>Active Sockets</h4>
-                    </div>
-                    <table class="inspection-table" id="socket-table">
-                        <thead>
-                            <tr>
-                                <th>Proto</th>
-                                <th>Local</th>
-                                <th>Foreign</th>
-                                <th>State</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-
-
-                <div class="panel-content" id="content-fault" style="display: none;">
-                    <div class="input-group">
-                        <div class="input-label">Node Failures</div>
-                        <div id="fault-node-failures" style="display: flex; flex-direction: column; gap: 8px;">
-                            <!-- Populated by JavaScript based on node type and current failures -->
+                        <div id="router-only-features"
+                            style="display: none; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+                            <h4 style="margin-bottom: 12px;">Add Static Route</h4>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <input type="text" id="route-dest" placeholder="Destination (e.g., 10.0.3.0/24)"
+                                    class="styled-input">
+                                <input type="text" id="route-gw" placeholder="Gateway IP" class="styled-input">
+                                <button class="btn btn-primary" style="margin-top: 4px;" onclick="addStaticRoute()">
+                                    <i class="material-icons-round">add_road</i> Add Route
+                                </button>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="input-group">
-                        <div class="input-label">Interface Control</div>
-                        <div id="fault-interfaces" style="display: flex; flex-direction: column; gap: 8px;">
-                            <!-- populated by js -->
+                    <!-- Corruption Tab -->
+                    <div class="tab-content" id="content-corruption" style="flex: 1; overflow-y: auto;">
+                        <h4 style="margin-bottom: 12px;">Node Failures</h4>
+                        <button id="btn-toggle-icmp" class="btn btn-danger" style="margin-bottom: 8px;"
+                            onclick="toggleICMP()">
+                            <i class="material-icons-round">block</i> Block ICMP
+                        </button>
+                        <button id="btn-toggle-silent" class="btn btn-danger" style="margin-bottom: 20px;"
+                            onclick="toggleSilentMode()">
+                            <i class="material-icons-round">volume_off</i> Silent Mode
+                        </button>
+
+                        <h4 style="margin-bottom: 12px;">Interface Control</h4>
+                        <div id="fault-interfaces"></div>
+                    </div>
+
+                    <!-- Monitor Tab -->
+                    <div class="tab-content" id="content-monitor" style="flex: 1; overflow-y: auto;">
+                        <h4 style="margin-bottom: 12px;">Hop-by-Hop Monitor</h4>
+                        <div id="monitor-log"
+                            style="font-size: 11px; font-family: monospace; max-height: 400px; overflow-y: auto; border: 1px solid var(--border); padding: 4px; border-radius: 4px;">
                         </div>
                     </div>
-                </div>
 
-                <div class="panel-content" id="content-monitor" style="display: none;">
-                    <div class="inspection-header">
-                        <h4>Hop-by-Hop Monitor</h4>
+                    <!-- Node Actions -->
+                    <div class="actions" id="node-actions">
+                        <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px;"
+                            onclick="openTerminal()">
+                            <i class="material-icons-round">terminal</i> Terminal
+                        </button>
+                        <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px;"
+                            onclick="saveNodeProperties()">
+                            <i class="material-icons-round">save</i> Save Changes
+                        </button>
+                        <button id="btn-save-link" class="btn btn-primary"
+                            style="width: 100%; margin-bottom: 12px; display: none;" onclick="saveLinkProperties()">
+                            <i class="material-icons-round">save</i> Save Link Changes
+                        </button>
+                        <button id="btn-delete-node" class="btn btn-danger" style="width: 100%;"
+                            onclick="deleteSelectedNode()">
+                            <i class="material-icons-round">delete</i> Delete Node
+                        </button>
+                        <button id="btn-delete-link" class="btn btn-danger" style="width: 100%; display: none;"
+                            onclick="deleteSelectedLink()">
+                            <i class="material-icons-round">delete</i> Delete Link
+                        </button>
                     </div>
-                    <div id="monitor-log"
-                        style="font-family: 'JetBrains Mono'; font-size: 10px; line-height: 1.4; color: #888; overflow-y: auto; max-height: 500px;">
-                        <!-- Events populated here -->
-                    </div>
-                </div>
-
-                <div id="node-actions" style="padding: 24px; border-top: 1px solid var(--border); margin-top: auto;">
-                    <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px;" onclick="openTerminal()">
-                        <i class="material-icons-round">terminal</i> Terminal
-                    </button>
-                    <button class="btn btn-danger" onclick="deleteSelectedNode()">
-                        <i class="material-icons-round">delete</i> Delete Node
-                    </button>
                 </div>
             </div>
         </div>
 
         <div class="resizer-h" id="terminal-resizer"></div>
 
-        <!-- Terminal Overlay -->
+        <!-- Terminal Panel -->
         <div id="terminal-panel">
             <div class="terminal-header">
-                <span class="terminal-tab">>_ TTY: <span id="term-title-name">host-1</span></span>
+                <span class="terminal-tab">> TTY: <span id="term-title-name">host-1</span></span>
                 <i class="material-icons-round close-term" onclick="toggleTerminal()">close</i>
             </div>
-            <div class="terminal-content" id="console-output"
-                onclick="document.getElementById('console-input').focus()">
-                <!-- Logs go here -->
-                <div id="log-container"></div>
-                <div class="input-line">
-                    <span class="prompt" id="console-prompt">root@host-1:~#</span>
-                    <input type="text" id="console-input" autocomplete="off" spellcheck="false">
-                </div>
+            <div class="terminal-content" id="terminal-container">
+                <!-- xterm.js terminal will be mounted here -->
             </div>
         </div>
-
     </div>
 
+    <script src="static/terminal.js"></script>
     <script>
-        const API_URL = "http://localhost:8000/api";
-        const WS_URL = "ws://localhost:8000/ws/packets";
-
-        // Initialize Vis.js DataSets
-        const nodesDataSet = new vis.DataSet();
-        const edgesDataSet = new vis.DataSet();
+        const API_URL = 'http://localhost:8000/api';
         let network = null;
-        let selectedNodeId = null;
-        let selectedNodeData = null;
-
-        let socket = null;
-        let activeProcesses = {}; // pid -> { last_index, is_finished }
-
+        let nodesDataSet = null;
+        let edgesDataSet = null;
         let currentTool = 'select';
         let linkSource = null;
+        let selectedNodeId = null;
+        let selectedNodeData = null;
+        let selectedLinkId = null;
+        let terminalManager = null;
 
-        function switchTool(tool) {
-            currentTool = tool;
-            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
-            document.getElementById(`tool-${tool}`).classList.add('active');
 
-            if (tool === 'link') {
-                if (network) network.setOptions({ interaction: { dragNodes: false, dragView: true } });
-                showToast("Link Mode: Click source node, then target node");
-            } else if (tool === 'pan') {
-                linkSource = null;
-                if (network) network.setOptions({ interaction: { dragNodes: false, dragView: true } });
-            } else {
-                linkSource = null;
-                if (network) network.setOptions({ interaction: { dragNodes: true, dragView: true } });
-            }
-        }
 
-        function showToast(msg) {
-            // Simple toast implementation or just console log for now
-            console.log(msg);
-        }
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            initNetwork();
+            initWebSocket();
+            fetchState();
 
-        async function resetSimulation() {
-            alert("Reset function not yet implemented in new backend");
-            // TODO: Implement reset endpoint in backend
-            return;
-            if (!confirm("Are you sure you want to reset the simulation? All custom nodes and links will be lost.")) return;
-            try {
-                await fetch(`${API_URL}/control/reset`, { method: 'POST' });
-                fetchState();
-            } catch (e) {
-                alert("Failed to reset: " + e.message);
-            }
-        }
+            // Initialize terminal manager
+            terminalManager = new TerminalManager();
+            window.terminalManager = terminalManager;
 
-        // --- Icons Map ---
-        const ICONS = {
-            host: { code: '\ue31e', color: '#10b981' }, // Laptop
-            router: { code: '\ue328', color: '#3b82f6' }, // Router
-            switch: { code: '\ue32a', color: '#f59e0b' }, // Switch axis (?) or ie320
-            dns_server: { code: '\ue1bd', color: '#8b5cf6' }, // DNS/Storage
-            isp: { code: '\ue2bd', color: '#ef4444' } // Cloud
-        };
+            // Periodic refresh
+            setInterval(fetchState, 5000);
+        });
 
-        function initGraph() {
-            const container = document.getElementById('network-graph');
+        function initNetwork() {
+            const container = document.getElementById('network-canvas');
+            nodesDataSet = new vis.DataSet([]);
+            edgesDataSet = new vis.DataSet([]);
+
             const data = { nodes: nodesDataSet, edges: edgesDataSet };
             const options = {
                 nodes: {
@@ -898,53 +815,69 @@
                     icon: {
                         face: 'Material Icons Round',
                         size: 35,
-                        color: '#e2e8f0'
+                        color: '#3b82f6',
+                        weight: 'normal'
                     },
-                    font: { size: 12, color: '#94a3b8', face: 'Inter', valign: 'bottom', multi: 'md' },
-                    shadow: { enabled: true, color: 'rgba(0,0,0,0.5)', size: 10, x: 5, y: 5 },
-                },
-                edges: {
-                    width: 2,
-                    color: { color: '#334155', highlight: '#94a3b8' },
-                    dashes: true, // As per screenshot
-                    smooth: { type: 'continuous', roundness: 0 },
-                    font: { color: '#64748b', strokeWidth: 0, size: 10, align: 'top' }
-                },
-                physics: {
-                    solver: 'barnesHut',
-                    barnesHut: {
-                        gravitationalConstant: -4000,
-                        centralGravity: 0.3,
-                        springLength: 120,
-                        springConstant: 0.01,
-                        damping: 0.3,
-                        avoidOverlap: 0.2
-                    },
-                    stabilization: {
-                        enabled: true,
-                        iterations: 1000,
-                        updateInterval: 50
+                    font: {
+                        size: 12,
+                        color: '#94a3b8',
+                        face: 'Inter'
                     }
                 },
-                interaction: { hover: true, tooltipDelay: 200 }
+                edges: {
+                    color: { color: '#475569', highlight: '#3b82f6' },
+                    width: 2,
+                    smooth: { type: 'continuous' }
+                },
+                physics: {
+                    enabled: true,
+                    stabilization: {
+                        enabled: false,
+                        iterations: 1000,
+                        updateInterval: 25,
+                        onlyDynamicEdges: false,
+                        fit: true
+                    },
+                    solver: 'barnesHut',
+                    barnesHut: {
+                        theta: 0.5,
+                        gravitationalConstant: -10000,
+                        centralGravity: 0.1,
+                        springConstant: 0.08,
+                        springLength: 200,
+                        damping: 0.2,
+                        avoidOverlap: 1
+                    },
+                    minVelocity: 0.75
+                },
+                interaction: {
+                    dragNodes: true,
+                    dragView: true,
+                    zoomView: true,
+                    hover: true
+                }
             };
+
             network = new vis.Network(container, data, options);
 
-            network.on("click", async function (params) {
+            // Wake up physics on drag to ensure connected nodes move
+            network.on("dragStart", function (params) {
                 if (params.nodes.length > 0) {
-                    const nodeId = params.nodes[0];
+                    // Enable physics for ALL nodes so the entire topology moves and oscillates together
+                    const allIds = nodesDataSet.getIds();
+                    const updates = allIds.map(id => ({ id: id, physics: true }));
+                    nodesDataSet.update(updates);
+                }
+                network.setOptions({ physics: { enabled: true } });
+            });
+
+            // Click handler
+            network.on("click", function (params) {
+                if (params.nodes.length > 0) {
                     if (currentTool === 'link') {
-                        if (!linkSource) {
-                            linkSource = nodeId;
-                            showToast(`Source selected: ${nodeId}. Now click target node.`);
-                        } else if (linkSource !== nodeId) {
-                            const targetId = nodeId;
-                            showToast(`Linking ${linkSource} to ${targetId}...`);
-                            await createLink(linkSource, targetId);
-                            linkSource = null;
-                        }
+                        handleLinkClick(params.nodes[0]);
                     } else {
-                        selectNode(nodeId);
+                        selectNode(params.nodes[0]);
                     }
                 } else if (params.edges.length > 0) {
                     selectLink(params.edges[0]);
@@ -952,63 +885,113 @@
                     clearSelection();
                 }
             });
+
+            // Persist positions on dragEnd
+            network.on("dragEnd", function (params) {
+                if (params.nodes.length > 0) {
+                    const nodeId = params.nodes[0];
+                    const positions = network.getPositions([nodeId]);
+                    const pos = positions[nodeId];
+                    if (pos) {
+                        updateNodePosition(nodeId, pos.x, pos.y);
+                    }
+                }
+                // Let physics settle for a bit then freeze to prevent "magnet" drift
+                setTimeout(() => {
+                    network.setOptions({ physics: { enabled: false } });
+
+                    // Revert all nodes to physics: false so they stay pinned until next interaction
+                    const ids = nodesDataSet.getIds();
+                    const updates = ids.map(id => ({ id: id, physics: false }));
+                    nodesDataSet.update(updates);
+
+                    // Save ALL positions so the new shape is persisted
+                    const positions = network.getPositions();
+                    // Save ALL positions efficiently using batch endpoint
+                    batchUpdatePositions(positions);
+                }, 5000);
+            });
+
+            // Hover handlers for link preview
+            network.on("hoverNode", function (params) {
+                if (currentTool === 'link' && linkSource && linkSource !== params.node) {
+                    if (edgesDataSet.get('temp-link')) {
+                        edgesDataSet.remove('temp-link');
+                    }
+                    edgesDataSet.add({
+                        id: 'temp-link',
+                        from: linkSource,
+                        to: params.node,
+                        dashes: [5, 5],
+                        color: { color: '#10b981', opacity: 0.5 },
+                        width: 2
+                    });
+                }
+            });
+
+            network.on("blurNode", function (params) {
+                if (edgesDataSet.get('temp-link')) {
+                    edgesDataSet.remove('temp-link');
+                }
+            });
+
+            // Packet Animation Loop
+
         }
 
-        // --- State Management ---
+        const iconMap = {
+            host: { code: '\ue30a', color: '#3b82f6' },        // computer
+            router: { code: '\ue328', color: '#8b5cf6' },      // router
+            switch: { code: '\ueb2f', color: '#10b981' },      // hub
+            dns_server: { code: '\ue875', color: '#f59e0b' },  // dns
+            dns: { code: '\ue875', color: '#f59e0b' },         // dns fallback
+            server: { code: '\ue1db', color: '#f43f5e' },      // storage/server
+            device_hub: { code: '\ue335', color: '#10b981' },
+            storage: { code: '\ue1db', color: '#f43f5e' }
+        };
 
         async function fetchState() {
             try {
-                // Fetch devices and links separately from new API
-                const [devicesResponse, linksResponse] = await Promise.all([
-                    fetch(`${API_URL}/devices`),
-                    fetch(`${API_URL}/links`)
-                ]);
-                const devicesData = await devicesResponse.json();
-                const linksData = await linksResponse.json();
+                // Ensure font is loaded for canvas
+                if (document.fonts) {
+                    await document.fonts.load('12px "Material Icons Round"');
+                }
 
-                // Transform to old format for compatibility
-                const data = {
-                    nodes: devicesData.devices.map(d => ({
-                        name: d.name,
-                        type: d.type,
-                        interfaces: [] // Will be populated from topology if needed
-                    })),
-                    links: linksData.links.map(l => ({
-                        id: l.id,
-                        source: l.device_a,
-                        target: l.device_b,
-                        latency_ms: l.latency_ms
-                    }))
-                };
+                const response = await fetch(`${API_URL}/state`);
+                const state = await response.json();
 
-                // Nodes Sync
-                const currentNodes = nodesDataSet.getIds();
-                const newNodes = new Set(data.nodes.map(n => n.name));
-                const nodesToRemove = currentNodes.filter(id => !newNodes.has(id));
-                nodesDataSet.remove(nodesToRemove);
+                // --- Batch Node Updates ---
+                const nodeIds = new Set();
+                const nodeUpdates = [];
+                let layoutChanges = false;
 
-                data.nodes.forEach(n => {
-                    const iconDef = ICONS[n.type] || ICONS.host;
+                state.devices.forEach(n => {
+                    nodeIds.add(n.name);
+
+                    const type = n.type ? n.type.toLowerCase() : 'host';
+                    const iconDef = iconMap[type] || iconMap.host;
                     const isSelected = selectedNodeId === n.name;
 
-                    // Get first IP address for label
-                    let ipAddress = '';
-                    if (n.interfaces && n.interfaces.length > 0) {
-                        for (const iface of n.interfaces) {
-                            if (iface.ips && iface.ips.length > 0) {
-                                ipAddress = iface.ips[0].split('/')[0];
-                                break;
+                    // Get IP addresses
+                    let ipLabel = '';
+                    if (n.ip_addresses) {
+                        const ips = Object.values(n.ip_addresses).map(ip => ip.split('/')[0]);
+                        if (ips.length > 0) {
+                            if (n.type === 'router' || n.type === 'switch') {
+                                ipLabel = ips.join('\n');
+                            } else {
+                                ipLabel = ips[0];
                             }
                         }
                     }
 
-                    // Create label with IP address below node name
-                    const label = ipAddress ? `${n.name}\n${ipAddress}` : n.name;
+                    const label = ipLabel ? `${n.name}\n${ipLabel}` : n.name;
 
                     const nodeObj = {
                         id: n.name,
                         label: label,
                         icon: {
+                            face: 'Material Icons Round',
                             code: iconDef.code,
                             color: isSelected ? '#10b981' : iconDef.color,
                             size: isSelected ? 45 : 35
@@ -1017,169 +1000,357 @@
                             size: isSelected ? 14 : 12,
                             color: isSelected ? '#10b981' : '#94a3b8',
                             face: 'Inter',
-                            valignn: 'bottom',
-                            multi: false,
+                            align: 'center',
+                            multi: 'html',
                             bold: isSelected
                         },
                         borderWidth: isSelected ? 3 : 0,
                         borderWidthSelected: 3,
-                        shapeProperties: {
-                            borderDashes: false
-                        }
+                        shapeProperties: { borderDashes: false }
                     };
 
-                    if (nodesDataSet.get(n.name)) {
-                        nodesDataSet.update(nodeObj);
-                    } else {
-                        nodesDataSet.add(nodeObj);
+                    // Logic to Pin nodes: Old nodes static, New nodes free
+                    const exists = !!nodesDataSet.get(n.name);
+                    nodeObj.fixed = false;
+
+                    // Only set x/y and physics if node does not exist (New Node)
+                    if (!exists) {
+                        nodeObj.x = n.x;
+                        nodeObj.y = n.y;
+                        nodeObj.physics = true; // New nodes oscillate to find position
+                        layoutChanges = true; // Mark as structural change
                     }
+                    // Existing nodes keep their current physics state (managed by drag events)
+
+                    nodeUpdates.push(nodeObj);
                 });
 
-                // Edges Sync
-                const currentEdges = edgesDataSet.getIds();
-                const newEdges = new Set(data.links.map(l => l.id));
-                const edgesToRemove = currentEdges.filter(id => !newEdges.has(id));
+                // Batch execute updates
+                nodesDataSet.update(nodeUpdates);
+
+                // Remove deleted nodes
+                const nodesToRemove = [];
+                nodesDataSet.forEach(node => {
+                    if (!nodeIds.has(node.id)) {
+                        nodesToRemove.push(node.id);
+                        layoutChanges = true;
+                    }
+                });
+                nodesDataSet.remove(nodesToRemove); // Batch remove
+
+
+                // --- Batch Edge Updates ---
+                const edgeIds = new Set();
+                const edgeUpdates = [];
+
+                state.links.forEach(link => {
+                    const edgeId = link.id;
+                    if (!edgesDataSet.get(edgeId)) {
+                        layoutChanges = true;
+                    }
+                    edgeIds.add(edgeId);
+
+                    const isSelected = selectedLinkId === edgeId;
+
+                    edgeUpdates.push({
+                        id: edgeId,
+                        from: link.device_a,
+                        to: link.device_b,
+                        color: {
+                            color: isSelected ? '#10b981' : '#475569',
+                            highlight: '#10b981'
+                        },
+                        width: isSelected ? 3 : 2,
+                        dashes: link.packet_loss_percent > 0,
+                        label: (link.latency_ms !== undefined && link.latency_ms !== null) ? `${link.latency_ms}ms` : '',
+                        font: { align: 'top', size: 10, color: '#94a3b8', strokeWidth: 0 }
+                    });
+                });
+
+                // Preserve temp link
+                if (edgesDataSet.get('temp-link')) {
+                    const temp = edgesDataSet.get('temp-link');
+                    edgeUpdates.push(temp);
+                    edgeIds.add('temp-link');
+                }
+
+                edgesDataSet.update(edgeUpdates);
+
+                // Remove deleted edges
+                const edgesToRemove = [];
+                edgesDataSet.forEach(edge => {
+                    if (!edgeIds.has(edge.id)) {
+                        edgesToRemove.push(edge.id);
+                        layoutChanges = true;
+                    }
+                });
                 edgesDataSet.remove(edgesToRemove);
 
-                data.links.forEach(l => {
-                    if (!edgesDataSet.get(l.id)) {
-                        edgesDataSet.add({
-                            id: l.id,
-                            from: l.source_node,
-                            to: l.target_node
-                        });
-                    }
-                });
-
-            } catch (e) { console.error(e); }
+                // Only enable physics if there are structural changes (new nodes/links)
+                if (layoutChanges) {
+                    network.setOptions({ physics: { enabled: true } });
+                    setTimeout(() => {
+                        network.setOptions({ physics: { enabled: false } });
+                        // Freeze all nodes after initial layout
+                        const ids = nodesDataSet.getIds();
+                        const updates = ids.map(id => ({ id: id, physics: false }));
+                        nodesDataSet.update(updates);
+                    }, 2500);
+                }
+            } catch (e) {
+                console.error("Fetch state error:", e);
+            }
         }
 
-        async function selectNode(name) {
-            selectedNodeId = name;
-            const response = await fetch(`${API_URL}/state`);
-            const data = await response.json();
-            const nodeData = data.nodes.find(n => n.name === name);
-            if (nodeData) {
+        async function selectNode(nodeId) {
+            selectedNodeId = nodeId;
+            try {
+                const response = await fetch(`${API_URL}/devices/${nodeId}`);
+                if (!response.ok) throw new Error('Device not found');
+                const nodeData = await response.json();
+
                 selectedNodeData = nodeData;
-                updatePropertiesPanel(nodeData);
-                // Trigger visual update for selection highlight
+                // Add device_type fallback because backend might use 'type'
+                if (!selectedNodeData.device_type && selectedNodeData.type) {
+                    selectedNodeData.device_type = selectedNodeData.type;
+                }
+
+                document.getElementById('node-actions').style.display = 'block';
+                // Show node buttons, hide link buttons
+                document.getElementById('btn-save-link').style.display = 'none';
+                document.getElementById('btn-delete-link').style.display = 'none';
+
+                // Show node action buttons
+                const nodeActionBtns = document.querySelectorAll('#node-actions button:not(#btn-save-link):not(#btn-delete-link)');
+                nodeActionBtns.forEach(b => b.style.display = 'block');
+
+                const typeBadge = document.getElementById('prop-type-badge');
+                typeBadge.style.background = 'var(--primary)';
+
+                updatePropertiesPanel(selectedNodeData);
                 fetchState();
+            } catch (e) {
+                console.error('Failed to select node:', e);
             }
         }
 
         async function selectLink(id) {
-            selectedNodeId = null; // Clear node selection
+            selectedNodeId = null;
             const response = await fetch(`${API_URL}/state`);
             const state = await response.json();
             const link = state.links.find(l => l.id === id);
             if (link) {
+                link.source_node = link.device_a || link.source_node;
+                link.target_node = link.device_b || link.target_node;
+                link.latency = link.latency_ms || link.latency;
+                link.packet_loss = link.packet_loss_percent || link.packet_loss;
                 updateLinkProperties(link);
             }
         }
 
         function updateLinkProperties(link) {
-            console.log('Updating link properties:', link);
+            selectedLinkId = link.id;
+            selectedNodeId = null;
 
-            // Show panel and hide empty state
             document.getElementById('panel-empty').style.display = 'none';
             document.getElementById('panel-content').style.display = 'flex';
-            document.getElementById('panel-content').style.flexDirection = 'column';
-            document.getElementById('panel-content').style.height = '100%';
+            document.getElementById('node-actions').style.display = 'block'; // Container for actions
 
-            // Switch to properties tab
+            // Toggle buttons
+            // Hide node buttons
+            const nodeActionBtns = document.querySelectorAll('#node-actions button:not(#btn-save-link):not(#btn-delete-link)');
+            nodeActionBtns.forEach(b => b.style.display = 'none');
+
+            // Show link buttons
+            document.getElementById('btn-save-link').style.display = 'block';
+            document.getElementById('btn-delete-link').style.display = 'block';
+
             switchTab('props');
 
-            // Update header
-            document.getElementById('prop-type-badge').innerText = 'LINK';
-            document.getElementById('prop-id').innerText = link.id;
+            const typeBadge = document.getElementById('prop-type-badge');
+            typeBadge.innerText = 'LINK';
+            typeBadge.style.background = '#64748b';
 
-            // Hide node-specific fields
+            document.getElementById('prop-id').value = link.id;
+
             document.getElementById('prop-hostname').parentElement.style.display = 'none';
             document.getElementById('prop-gateway').parentElement.style.display = 'none';
 
-            // Hide node-specific actions (Terminal and Delete Node buttons)
-            document.getElementById('node-actions').style.display = 'none';
-
-            // Show link properties in the interfaces container
             const container = document.getElementById('prop-interfaces');
             container.innerHTML = `
                 <div class="input-group">
-                    <div class="input-label">Source Node</div>
+                    <label>Source</label>
                     <input type="text" class="styled-input" value="${link.source_node}" readonly>
                 </div>
                 <div class="input-group">
-                    <div class="input-label">Target Node</div>
+                    <label>Target</label>
                     <input type="text" class="styled-input" value="${link.target_node}" readonly>
                 </div>
                 <div class="input-group">
-                    <div class="input-label">Latency (ms)</div>
-                    <input type="number" class="styled-input" value="${link.latency}" onchange="updateLinkAttr('${link.id}', 'latency', this.value)">
+                    <label>Latency (ms)</label>
+                    <input type="number" id="link-latency" class="styled-input" value="${link.latency}">
                 </div>
                 <div class="input-group">
-                    <div class="input-label">Packet Loss (%)</div>
-                    <input type="number" step="0.01" class="styled-input" value="${link.packet_loss || 0}" onchange="updateLinkAttr('${link.id}', 'packet_loss', this.value)">
+                    <label>Jitter (ms)</label>
+                    <input type="number" id="link-jitter" class="styled-input" value="${link.jitter_ms || 0}">
                 </div>
-                
-                <button class="btn btn-danger" style="width: 100%; margin-top: 20px;" onclick="deleteSelectedLink('${link.id}')">
-                    <i class="material-icons-round">delete</i> Delete Link
-                </button>
+                <div class="input-group">
+                    <label>Packet Loss (%)</label>
+                    <input type="number" id="link-loss" class="styled-input" value="${link.packet_loss || 0}">
+                </div>
             `;
-
-            // Clear inspection tables
-            document.querySelector('#arp-table tbody').innerHTML = '';
-            document.querySelector('#route-table tbody').innerHTML = '';
-            document.querySelector('#socket-table tbody').innerHTML = '';
-
-            // Clear fault interfaces
-            document.getElementById('fault-interfaces').innerHTML = '<div style="color: var(--text-mute); font-size: 12px; padding: 10px;">Link-specific controls not available</div>';
         }
 
-        async function updateLinkAttr(id, attr, value) {
-            await fetch(`${API_URL}/failure/enable`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: `${attr}_${id}`, type: attr, target: id, value: value })
-            });
-            fetchState();
+        async function saveLinkProperties() {
+            if (!selectedLinkId) return;
+
+            const latency = parseFloat(document.getElementById('link-latency').value) || 0;
+            const jitter = parseFloat(document.getElementById('link-jitter').value) || 0;
+            const loss = parseFloat(document.getElementById('link-loss').value) || 0;
+
+            try {
+                const response = await fetch(`${API_URL}/links/${selectedLinkId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        latency_ms: latency,
+                        jitter_ms: jitter,
+                        packet_loss_percent: loss
+                    })
+                });
+
+                if (response.ok) {
+                    showToast("Link properties saved");
+                    await fetchState();
+                } else {
+                    showToast("Failed to save link properties", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to save link properties", 'danger');
+            }
         }
 
         function clearSelection() {
             selectedNodeId = null;
+            selectedLinkId = null;
             document.getElementById('panel-empty').style.display = 'flex';
             document.getElementById('panel-content').style.display = 'none';
             document.getElementById('terminal-panel').classList.remove('open');
             fetchState();
         }
 
+        async function deleteSelectedLink() {
+            if (!selectedLinkId) return;
+            await deleteLink(selectedLinkId);
+        }
+
         function updatePropertiesPanel(node) {
-            console.log('Updating properties panel for node:', node);
+            if (!node) return;
+
+            // Normailize type
+            if (!node.device_type && node.type) node.device_type = node.type;
+            const deviceType = node.device_type ? node.device_type.toUpperCase() : 'UNKNOWN';
 
             document.getElementById('panel-empty').style.display = 'none';
             document.getElementById('panel-content').style.display = 'flex';
             document.getElementById('panel-content').style.flexDirection = 'column';
             document.getElementById('panel-content').style.height = '100%';
-
-            // ALWAYS show node-specific actions (Terminal and Delete Node buttons)
-            // These buttons should work for ALL node types: hosts, routers, switches, DNS servers
             document.getElementById('node-actions').style.display = 'block';
 
-            // Show hostname and gateway fields (they might be hidden from link selection)
             document.getElementById('prop-hostname').parentElement.style.display = 'block';
 
-            // Gateway field only makes sense for hosts and DNS servers (not routers/switches)
-            const showGateway = node.type === 'host' || node.type === 'dns_server';
+            const showGateway = node.device_type === 'host' || node.device_type === 'dns_server';
             document.getElementById('prop-gateway').parentElement.style.display = showGateway ? 'block' : 'none';
 
-            // Update basic info
-            document.getElementById('prop-type-badge').innerText = node.type.toUpperCase();
-            document.getElementById('prop-id').innerText = `node-${node.id}`;
-            document.getElementById('prop-hostname').value = node.name;
+            document.getElementById('prop-type-badge').innerText = deviceType;
+            document.getElementById('prop-id').value = node.name;
 
-            // Find default gateway from routing table (if applicable)
-            const defaultRoute = node.routing_table.find(r => r.dst === '0.0.0.0/0');
-            document.getElementById('prop-gateway').value = defaultRoute ? defaultRoute.gw : '';
+            // Real-time update for Hostname
+            const oldHostInput = document.getElementById('prop-hostname');
+            const newHostInput = oldHostInput.cloneNode(true);
+            oldHostInput.parentNode.replaceChild(newHostInput, oldHostInput);
 
-            // Interfaces
+            newHostInput.value = node.name;
+
+            newHostInput.addEventListener('input', (e) => {
+                const val = e.target.value;
+                const cached = nodesDataSet.get(node.name);
+                if (cached) {
+                    // Preserve existing IP info in label
+                    const parts = cached.label.split('\n');
+                    const ipPart = parts.length > 1 ? '\n' + parts.slice(1).join('\n') : '';
+                    nodesDataSet.update({ id: node.name, label: val + ipPart });
+                }
+            });
+
+            newHostInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    saveNodeProperties();
+                    newHostInput.blur();
+                }
+            });
+            // Gateway Input with Enter support
+            const oldGwInput = document.getElementById('prop-gateway');
+            const newGwInput = oldGwInput.cloneNode(true);
+            oldGwInput.parentNode.replaceChild(newGwInput, oldGwInput);
+
+            newGwInput.value = node.default_gateway || '';
+            newGwInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    saveNodeProperties();
+                    newGwInput.blur();
+                }
+            });
+
+            const routerFeatures = document.getElementById('router-only-features');
+            if (routerFeatures) {
+                routerFeatures.style.display = node.device_type === 'router' ? 'block' : 'none';
+            }
+
+            // Gateway Suggestion
+            const gatewayGroup = document.getElementById('prop-gateway').parentElement;
+            let suggestionDiv = document.getElementById('gateway-suggestion');
+            if (!suggestionDiv) {
+                suggestionDiv = document.createElement('div');
+                suggestionDiv.id = 'gateway-suggestion';
+                suggestionDiv.style.fontSize = '11px';
+                suggestionDiv.style.marginTop = '4px';
+                suggestionDiv.style.color = 'var(--primary)';
+                suggestionDiv.style.cursor = 'pointer';
+                gatewayGroup.appendChild(suggestionDiv);
+            }
+            suggestionDiv.innerText = '';
+
+            if (showGateway && !node.default_gateway) {
+                // Find connected routers
+                fetch(`${API_URL}/state`)
+                    .then(res => res.json())
+                    .then(state => {
+                        const connectedLinks = state.links.filter(l => l.device_a === node.name || l.device_b === node.name);
+                        const routerIps = [];
+                        connectedLinks.forEach(l => {
+                            const otherNodeName = l.device_a === node.name ? l.device_b : l.device_a;
+                            const otherNode = state.devices.find(d => d.name === otherNodeName);
+                            if (otherNode && otherNode.type === 'router') {
+                                // Find the IP of the router on the interface connected to this link
+                                const routerIface = l.device_a === otherNodeName ? l.interface_a : l.interface_b;
+                                if (otherNode.ip_addresses && otherNode.ip_addresses[routerIface]) {
+                                    routerIps.push(otherNode.ip_addresses[routerIface].split('/')[0]);
+                                }
+                            }
+                        });
+
+                        if (routerIps.length > 0) {
+                            suggestionDiv.innerText = `Suggest: ${routerIps[0]}`;
+                            suggestionDiv.onclick = () => {
+                                document.getElementById('prop-gateway').value = routerIps[0];
+                                suggestionDiv.innerText = '';
+                            };
+                        }
+                    });
+            }
+
             const container = document.getElementById('prop-interfaces');
             container.innerHTML = '';
 
@@ -1187,573 +1358,258 @@
             faultContainer.innerHTML = '';
 
             if (node.interfaces && node.interfaces.length > 0) {
-                node.interfaces.forEach(iface => {
-                    // Prop panel - show interface with IP
+                node.interfaces.forEach(ifaceName => {
                     const div = document.createElement('input');
                     div.className = 'styled-input';
                     div.style.marginBottom = '5px';
-                    const ipDisplay = iface.ips && iface.ips.length > 0 ? iface.ips[0] : 'No IP';
-                    div.value = `${iface.name}: ${ipDisplay}`;
+                    const ipDisplay = node.ip_addresses && node.ip_addresses[ifaceName]
+                        ? node.ip_addresses[ifaceName]
+                        : 'No IP';
+                    div.value = `${ifaceName}: ${ipDisplay}`;
                     div.readOnly = true;
                     container.appendChild(div);
 
-                    // Fault panel - interface control (ALL node types can have interfaces up/down)
                     const row = document.createElement('div');
                     row.className = 'interface-control';
                     row.style.display = 'flex';
                     row.style.gap = '10px';
                     row.style.alignItems = 'center';
-                    const state = iface.state.toLowerCase();
+                    row.style.marginBottom = '10px';
 
                     const label = document.createElement('div');
                     label.style.flex = '1';
                     label.style.fontSize = '13px';
                     label.style.fontWeight = '500';
-                    label.textContent = iface.name;
+                    label.textContent = ifaceName;
                     row.appendChild(label);
 
                     const button = document.createElement('button');
-                    button.id = `btn-iface-${iface.name}`;  // Add unique ID
-                    button.className = `btn ${state === 'up' ? 'btn-success' : 'btn-danger'}`;
+                    button.id = `btn-iface-${ifaceName}`;
+                    button.className = 'btn btn-success';
                     button.style.padding = '6px 12px';
                     button.style.fontSize = '11px';
                     button.style.fontWeight = '600';
                     button.style.minWidth = '80px';
                     button.style.transition = 'all 0.2s ease';
-                    button.onclick = () => toggleInterface(iface.name, state, button);  // Pass button element
+                    button.onclick = () => toggleInterface(ifaceName, 'up', button);
                     button.innerHTML = `
-                        <i class="material-icons-round" style="font-size: 14px; vertical-align: middle;">${state === 'up' ? 'arrow_upward' : 'arrow_downward'}</i>
-                        ${state.toUpperCase()}
+                        <i class="material-icons-round" style="font-size: 14px; vertical-align: middle;">arrow_upward</i>
+                        UP
                     `;
                     row.appendChild(button);
 
                     faultContainer.appendChild(row);
                 });
             } else {
-                container.innerHTML = '<div style="color: var(--text-mute); font-size: 12px;">No interfaces</div>';
+                container.innerHTML = '<div style="color: var(--text-mute); font-size: 12px;">No interfaces yet. Create a link to add interfaces.</div>';
             }
 
-            // Update inspection tables (ALL node types have ARP cache, routing table, sockets)
             updateInspectionTables(node);
-
-            // Update failure controls (Block ICMP, Silent Router, etc.)
             updateFailureControls(node);
         }
 
         function switchTab(tab) {
-            ['props', 'inspect', 'fault', 'monitor'].forEach(t => {
+            ['props', 'inspect', 'corruption', 'monitor'].forEach(t => {
                 document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
                 document.getElementById(`content-${t}`).style.display = t === tab ? 'block' : 'none';
             });
         }
 
         function updateInspectionTables(node) {
-            // ARP Cache
             const arpBody = document.querySelector('#arp-table tbody');
             arpBody.innerHTML = '';
-            const arpEntries = Object.entries(node.arp_cache || {});
+            const arpEntries = node.arp_cache || [];
             if (arpEntries.length > 0) {
-                for (const [ip, entry] of arpEntries) {
-                    arpBody.innerHTML += `<tr><td>${ip}</td><td>${entry.mac}</td><td>${Math.round(entry.age)}s</td></tr>`;
-                }
+                arpEntries.forEach(entry => {
+                    arpBody.innerHTML += `<tr><td>${entry.ip || '*'}</td><td>${entry.mac || '*'}</td><td>${entry.state || 'N/A'}</td></tr>`;
+                });
             } else {
-                arpBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-mute); font-style: italic; padding: 20px;">No ARP entries yet. Send a ping to populate the ARP cache.</td></tr>';
+                arpBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-mute); font-style: italic; padding: 20px;">No ARP entries yet</td></tr>';
             }
 
-            // Routing Table
             const routeBody = document.querySelector('#route-table tbody');
             routeBody.innerHTML = '';
             const routes = node.routing_table || [];
             if (routes.length > 0) {
                 routes.forEach(r => {
-                    routeBody.innerHTML += `<tr><td>${r.dst}</td><td>${r.gw || '*'}</td><td>${r.dev}</td></tr>`;
+                    routeBody.innerHTML += `<tr><td>${r.destination || r.raw}</td><td>${r.gateway || '*'}</td><td>${r.interface || '*'}</td></tr>`;
                 });
             } else {
                 routeBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-mute); font-style: italic; padding: 20px;">No routes configured</td></tr>';
             }
 
-            // Sockets
             const socketBody = document.querySelector('#socket-table tbody');
             socketBody.innerHTML = '';
-            const sockets = node.sockets || [];
+            const sockets = node.active_sockets || [];
             if (sockets.length > 0) {
                 sockets.forEach(s => {
-                    socketBody.innerHTML += `<tr><td>${s.protocol}</td><td>:${s.local_port}</td><td>${s.remote_ip || '*'}:${s.remote_port || '*'}</td><td>${s.state}</td></tr>`;
+                    socketBody.innerHTML += `<tr><td>${s.protocol}</td><td>${s.local}</td><td>${s.remote}</td><td>${s.state}</td></tr>`;
                 });
             } else {
                 socketBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-mute); font-style: italic; padding: 20px;">No active sockets</td></tr>';
             }
         }
 
-        async function updateFailureControls(node) {
-            const container = document.getElementById('fault-node-failures');
-            if (!container) return;
+        function updateFailureControls(node) {
+            if (!node) return;
+            const activeFailures = node.active_failures || [];
 
-            container.innerHTML = '';
-
-            // Get current failures
-            let activeFailures = {};
-            try {
-                const res = await fetch(`${API_URL}/failures`);
-                const failures = await res.json();
-                activeFailures = failures || {};
-            } catch (e) {
-                console.error('Failed to fetch failures:', e);
-            }
-
-            // Check which failures are active for this node
-            const icmpBlocked = Object.keys(activeFailures).some(id =>
-                activeFailures[id].type === 'icmp_block' && activeFailures[id].node === node.name
-            );
-            const silentRouter = Object.keys(activeFailures).some(id =>
-                activeFailures[id].type === 'silent_router' && activeFailures[id].node === node.name
-            );
-
-            // Block ICMP button (available for ALL node types)
-            const icmpBtn = document.createElement('button');
-            icmpBtn.id = 'btn-icmp-block';  // Add unique ID
-            icmpBtn.className = `btn ${icmpBlocked ? 'btn-danger' : 'btn-outline'}`;
-            icmpBtn.style.cssText = 'width: 100%; margin-bottom: 8px; justify-content: flex-start; transition: all 0.2s ease;';
-            icmpBtn.onclick = () => toggleFailure('icmp_block', icmpBlocked, icmpBtn);
-            icmpBtn.innerHTML = `
-                <i class="material-icons-round">block</i> 
-                Block ICMP ${icmpBlocked ? '<span style="color: #fbbf24; font-weight: 700;">(ACTIVE)</span>' : ''}
-            `;
-            container.appendChild(icmpBtn);
-
-            // Silent Router button (available for routers, but can work on any node)
-            const silentBtn = document.createElement('button');
-            silentBtn.id = 'btn-silent-mode';  // Add unique ID
-            silentBtn.className = `btn ${silentRouter ? 'btn-danger' : 'btn-outline'}`;
-            silentBtn.style.cssText = 'width: 100%; margin-bottom: 8px; justify-content: flex-start; transition: all 0.2s ease;';
-            silentBtn.onclick = () => toggleFailure('silent_router', silentRouter, silentBtn);
-            const label = node.type === 'router' ? 'Silent Router' : 'Silent Mode';
-            silentBtn.innerHTML = `
-                <i class="material-icons-round">volume_off</i> 
-                ${label} ${silentRouter ? '<span style="color: #fbbf24; font-weight: 700;">(ACTIVE)</span>' : ''}
-            `;
-            container.appendChild(silentBtn);
-
-            // Add note for non-router nodes
-            if (node.type !== 'router') {
-                const note = document.createElement('div');
-                note.style.cssText = 'font-size: 11px; color: var(--text-mute); margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.03); border-radius: 4px;';
-                note.innerHTML = `
-                    <i class="material-icons-round" style="font-size: 14px; vertical-align: middle;">info</i>
-                    Silent mode prevents this node from sending ICMP error messages.
-                `;
-                container.appendChild(note);
-            }
-        }
-
-        async function toggleFailure(type, isCurrentlyActive, buttonElement) {
-            if (!selectedNodeId) return;
-
-            console.log(`Toggle ${type}: currently ${isCurrentlyActive ? 'active' : 'inactive'}`);
-
-            // Immediately update button appearance for instant feedback
-            const newState = !isCurrentlyActive;
-
-            if (buttonElement) {
-                // Disable button to prevent double-clicks
-                buttonElement.disabled = true;
-                buttonElement.style.cursor = 'wait';
-
-                // Update button appearance immediately
-                if (newState) {
-                    // Enabling - turn red
-                    buttonElement.className = 'btn btn-danger';
-                    buttonElement.style.transform = 'scale(0.95)';
-                    setTimeout(() => buttonElement.style.transform = 'scale(1)', 100);
-
-                    // Update text
-                    const icon = buttonElement.querySelector('i');
-                    const text = type === 'icmp_block' ? 'Block ICMP' :
-                        (selectedNodeData.type === 'router' ? 'Silent Router' : 'Silent Mode');
-                    buttonElement.innerHTML = `
-                        ${icon.outerHTML}
-                        ${text} <span style="color: #fbbf24; font-weight: 700;">(ACTIVE)</span>
-                    `;
+            const icmpBtn = document.getElementById('btn-toggle-icmp');
+            if (icmpBtn) {
+                if (activeFailures.includes('block_icmp')) {
+                    icmpBtn.className = 'btn btn-success';
+                    icmpBtn.innerHTML = '<i class="material-icons-round">check_circle</i> ICMP Blocked';
                 } else {
-                    // Disabling - turn gray
-                    buttonElement.className = 'btn btn-outline';
-                    buttonElement.style.transform = 'scale(0.95)';
-                    setTimeout(() => buttonElement.style.transform = 'scale(1)', 100);
-
-                    // Update text
-                    const icon = buttonElement.querySelector('i');
-                    const text = type === 'icmp_block' ? 'Block ICMP' :
-                        (selectedNodeData.type === 'router' ? 'Silent Router' : 'Silent Mode');
-                    buttonElement.innerHTML = `
-                        ${icon.outerHTML}
-                        ${text}
-                    `;
+                    icmpBtn.className = 'btn btn-danger';
+                    icmpBtn.innerHTML = '<i class="material-icons-round">block</i> Block ICMP';
                 }
             }
 
-            try {
-                if (isCurrentlyActive) {
-                    // Disable the failure - find and delete it
-                    console.log('Disabling failure...');
-                    const res = await fetch(`${API_URL}/failures`);
-                    const failures = await res.json();
-                    const failureId = Object.keys(failures).find(id =>
-                        failures[id].type === type && failures[id].node === selectedNodeId
-                    );
+            const silentBtn = document.getElementById('btn-toggle-silent');
+            if (silentBtn) {
+                // Ensure case-insensitive check for router type, handling both 'device_type' and 'type' keys
+                const rawType = node.device_type || node.type || '';
+                const type = rawType.toLowerCase();
+                const isRouter = type === 'router';
 
-                    if (failureId) {
-                        const deleteRes = await fetch(`${API_URL}/failure/${failureId}`, { method: 'DELETE' });
-                        const result = await deleteRes.json();
-                        console.log('Disable result:', result);
-                        showToast(result.message || `${type.replace('_', ' ')} disabled`, 'success');
-                    }
+                // Always display the button to prevent UI jumping
+                silentBtn.style.display = 'inline-flex';
+                silentBtn.style.width = '100%';
+
+                if (!isRouter) {
+                    // Disable for non-routers
+                    silentBtn.disabled = true;
+                    silentBtn.style.opacity = '0.5';
+                    silentBtn.style.cursor = 'not-allowed';
+                    silentBtn.className = 'btn btn-danger';
+                    silentBtn.innerHTML = '<i class="material-icons-round">volume_off</i> Silent Mode (Routers Only)';
                 } else {
-                    // Enable the failure
-                    console.log('Enabling failure...');
-                    const enableRes = await fetch(`${API_URL}/failure/enable`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            id: `${type}_${selectedNodeId}`,
-                            type: type,
-                            target: selectedNodeId
-                        })
-                    });
+                    // Enable for routers
+                    silentBtn.disabled = false;
+                    silentBtn.style.opacity = '1';
+                    silentBtn.style.cursor = 'pointer';
 
-                    const result = await enableRes.json();
-                    console.log('Enable result:', result);
-
-                    if (enableRes.ok) {
-                        showToast(result.message || `${type.replace('_', ' ')} enabled`, 'success');
+                    if (activeFailures.includes('silent_router')) {
+                        silentBtn.className = 'btn btn-success';
+                        silentBtn.innerHTML = '<i class="material-icons-round">check_circle</i> Silent Mode Active';
                     } else {
-                        // Revert button state on error
-                        if (buttonElement) {
-                            buttonElement.className = isCurrentlyActive ? 'btn btn-danger' : 'btn btn-outline';
-                            const icon = buttonElement.querySelector('i');
-                            const text = type === 'icmp_block' ? 'Block ICMP' :
-                                (selectedNodeData.type === 'router' ? 'Silent Router' : 'Silent Mode');
-                            if (isCurrentlyActive) {
-                                buttonElement.innerHTML = `${icon.outerHTML} ${text} <span style="color: #fbbf24; font-weight: 700;">(ACTIVE)</span>`;
-                            } else {
-                                buttonElement.innerHTML = `${icon.outerHTML} ${text}`;
-                            }
-                        }
-                        showToast(result.detail || 'Failed to toggle failure', 'error');
+                        silentBtn.className = 'btn btn-danger';
+                        silentBtn.innerHTML = '<i class="material-icons-round">volume_off</i> Silent Mode';
                     }
-                }
-            } catch (e) {
-                console.error('Failed to toggle failure:', e);
-                // Revert button state on error
-                if (buttonElement) {
-                    buttonElement.className = isCurrentlyActive ? 'btn btn-danger' : 'btn btn-outline';
-                    const icon = buttonElement.querySelector('i');
-                    const text = type === 'icmp_block' ? 'Block ICMP' :
-                        (selectedNodeData.type === 'router' ? 'Silent Router' : 'Silent Mode');
-                    if (isCurrentlyActive) {
-                        buttonElement.innerHTML = `${icon.outerHTML} ${text} <span style="color: #fbbf24; font-weight: 700;">(ACTIVE)</span>`;
-                    } else {
-                        buttonElement.innerHTML = `${icon.outerHTML} ${text}`;
-                    }
-                }
-                showToast('Network error', 'error');
-            } finally {
-                // Re-enable button
-                if (buttonElement) {
-                    buttonElement.disabled = false;
-                    buttonElement.style.cursor = 'pointer';
                 }
             }
-
-            // Don't refresh automatically - trust the button state we just set
-            // The button is already showing the correct state
-            // Only the error handlers above will revert if something went wrong
-        }
-
-        async function toggleInterface(iface, currentState, buttonElement) {
-            if (!selectedNodeId) return;
-
-            console.log(`Toggle interface ${iface}: currently ${currentState}`);
-
-            // Use passed button element instead of searching
-            const targetButton = buttonElement;
-
-            const newState = currentState === 'up' ? 'down' : 'up';
-
-            // Immediately update button appearance
-            if (targetButton) {
-                targetButton.disabled = true;
-                targetButton.style.cursor = 'wait';
-                targetButton.style.transform = 'scale(0.95)';
-                setTimeout(() => targetButton.style.transform = 'scale(1)', 100);
-
-                if (newState === 'down') {
-                    targetButton.className = 'btn btn-danger';
-                    targetButton.innerHTML = `<i class="material-icons-round" style="font-size: 14px; vertical-align: middle;">arrow_downward</i> DOWN`;
-                } else {
-                    targetButton.className = 'btn btn-success';
-                    targetButton.innerHTML = `<i class="material-icons-round" style="font-size: 14px; vertical-align: middle;">arrow_upward</i> UP`;
-                }
-            }
-
-            try {
-                if (currentState === 'up') {
-                    // Shutdown interface
-                    console.log(`Shutting down interface ${iface}...`);
-                    const res = await fetch(`${API_URL}/failure/enable`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            id: `shutdown_${selectedNodeId}_${iface}`,
-                            type: 'interface_shutdown',
-                            target: `${selectedNodeId}:${iface}`
-                        })
-                    });
-
-                    const result = await res.json();
-                    console.log('Shutdown result:', result);
-                    if (res.ok) {
-                        showToast(result.message || `Interface ${iface} shut down`, 'success');
-                    } else {
-                        // Revert on error
-                        if (targetButton) {
-                            targetButton.className = 'btn btn-success';
-                            targetButton.innerHTML = `<i class="material-icons-round">arrow_upward</i> UP`;
-                        }
-                        showToast(result.detail || 'Failed to shutdown interface', 'error');
-                    }
-                } else {
-                    // Restore interface
-                    console.log(`Restoring interface ${iface}...`);
-                    const res = await fetch(`${API_URL}/failure/enable`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            id: `restore_${selectedNodeId}_${iface}`,
-                            type: 'interface_restore',
-                            target: `${selectedNodeId}:${iface}`
-                        })
-                    });
-
-                    const result = await res.json();
-                    console.log('Restore result:', result);
-                    if (res.ok) {
-                        showToast(result.message || `Interface ${iface} restored`, 'success');
-                    } else {
-                        // Revert on error
-                        if (targetButton) {
-                            targetButton.className = 'btn btn-danger';
-                            targetButton.innerHTML = `<i class="material-icons-round">arrow_downward</i> DOWN`;
-                        }
-                        showToast(result.detail || 'Failed to restore interface', 'error');
-                    }
-                }
-            } catch (e) {
-                console.error('Failed to toggle interface:', e);
-                // Revert button state on error
-                if (targetButton) {
-                    if (currentState === 'up') {
-                        targetButton.className = 'btn btn-success';
-                        targetButton.innerHTML = `<i class="material-icons-round">arrow_upward</i> UP`;
-                    } else {
-                        targetButton.className = 'btn btn-danger';
-                        targetButton.innerHTML = `<i class="material-icons-round">arrow_downward</i> DOWN`;
-                    }
-                }
-                showToast('Network error', 'error');
-            } finally {
-                // Re-enable button
-                if (targetButton) {
-                    targetButton.disabled = false;
-                    targetButton.style.cursor = 'pointer';
-                }
-            }
-
-            // Don't refresh automatically - trust the button state we just set
-            // The button is already showing the correct state
-            // Only the error handlers above will revert if something went wrong
-        }
-
-        // --- Terminal ---
-
-        function toggleTerminal() {
-            document.getElementById('terminal-panel').classList.toggle('open');
         }
 
         function openTerminal() {
             if (!selectedNodeId) return;
+
+            if (window.terminalManager) {
+                window.terminalManager.createTerminal(selectedNodeId);
+            }
+
             const panel = document.getElementById('terminal-panel');
             panel.classList.add('open');
 
-            // Reset terminal content with boot banner if strictly switching?
-            // For now just clear and show header
-            const log = document.getElementById('log-container');
-            log.innerHTML = '';
-
-            // Banner
-            const banner = document.createElement('div');
-            banner.className = 'log-boot';
-            banner.innerText = `Linux ${selectedNodeId} 5.10.0-28-amd64 #1 SMP Simulator (2025) x86_64\nType "help" for a list of supported commands.\n`;
-            log.appendChild(banner);
-
-            document.getElementById('term-title-name').innerText = `${selectedNodeId} (${getHostIp()})`;
-            document.getElementById('console-prompt').innerText = `root@${selectedNodeId}:~#`;
-            document.getElementById('console-input').focus();
+            let ip = getHostIp();
+            document.getElementById('term-title-name').innerText = `${selectedNodeId} (${ip})`;
         }
 
         function getHostIp() {
-            if (!selectedNodeData || !selectedNodeData.interfaces) return 'no IP';
+            if (!selectedNodeData) return 'no IP';
 
-            // Find first interface with an IP
-            for (const iface of selectedNodeData.interfaces) {
-                if (iface.ips && iface.ips.length > 0) {
-                    return iface.ips[0].split('/')[0];
+            if (selectedNodeData.ip_addresses) {
+                const ips = Object.values(selectedNodeData.ip_addresses);
+                if (ips.length > 0) {
+                    return ips[0].split('/')[0];
                 }
             }
-
             return 'no IP';
         }
 
-        // Command history
-        let commandHistory = [];
-        let historyIndex = -1;
-
-        document.getElementById('console-input').addEventListener('keydown', function (e) {
-            if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (commandHistory.length > 0) {
-                    if (historyIndex < commandHistory.length - 1) {
-                        historyIndex++;
-                        this.value = commandHistory[commandHistory.length - 1 - historyIndex];
-                    }
-                }
-            } else if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (historyIndex > 0) {
-                    historyIndex--;
-                    this.value = commandHistory[commandHistory.length - 1 - historyIndex];
-                } else if (historyIndex === 0) {
-                    historyIndex = -1;
-                    this.value = '';
-                }
-            }
-        });
-
-        document.getElementById('console-input').addEventListener('keypress', async function (e) {
-            if (e.key === 'Enter') {
-                const cmd = this.value.trim();
-                this.value = '';
-
-                if (!cmd) return;
-
-                // Add to history
-                if (cmd !== 'clear') {
-                    commandHistory.push(cmd);
-                    if (commandHistory.length > 100) commandHistory.shift(); // Limit history
-                }
-                historyIndex = -1;
-
-                const log = document.getElementById('log-container');
-                const entry = document.createElement('div');
-                entry.innerHTML = `<span class="prompt">root@${selectedNodeId}:~#</span> ${cmd}`;
-                log.appendChild(entry);
-
-                if (cmd === 'clear') {
-                    log.innerHTML = '';
-                    return;
-                }
-
-                try {
-                    // Update UI to show "running" state?
-                    const response = await fetch(`${API_URL}/command`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ node_name: selectedNodeId, command: cmd })
-                    });
-                    const result = await response.json();
-
-                    if (result.stdout) {
-                        const out = document.createElement('div');
-                        out.innerHTML = ansiToHtml(result.stdout);
-                        out.className = 'log-entry';
-                        log.appendChild(out);
-                    }
-                    if (result.stderr) {
-                        const err = document.createElement('div');
-                        err.innerHTML = ansiToHtml(result.stderr);
-                        err.className = 'log-entry log-error';
-                        log.appendChild(err);
-                    }
-                } catch (e) {
-                    const errDiv = document.createElement('div');
-                    errDiv.innerText = "Error: " + e.message;
-                    errDiv.className = 'log-error';
-                    log.appendChild(errDiv);
-                }
-
-                // Scroll to bottom with smooth animation
-                const container = document.getElementById('console-output');
+        async function toggleTerminal() {
+            const panel = document.getElementById('terminal-panel');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                // Wait for transition to finish or DOM to update
                 setTimeout(() => {
-                    container.scrollTop = container.scrollHeight;
-                }, 50);
-            }
-        });
-
-        function initWebSocket() {
-            socket = new WebSocket(WS_URL);
-            socket.onmessage = function (event) {
-                const data = JSON.parse(event.data);
-
-                // Update terminal if we have an active process matching selected node
-                if (data.processes && selectedNodeId) {
-                    data.processes.forEach(proc => {
-                        if (proc.node === selectedNodeId) {
-                            const pid = proc.pid;
-                            if (!activeProcesses[pid]) {
-                                activeProcesses[pid] = { last_index: 0 };
-                            }
-                            const lastIdx = activeProcesses[pid].last_index;
-                            if (proc.output.length > lastIdx) {
-                                const newLines = proc.output.slice(lastIdx);
-                                const log = document.getElementById('log-container');
-                                newLines.forEach(line => {
-                                    const out = document.createElement('div');
-                                    out.innerText = line;
-                                    out.className = 'log-entry';
-                                    log.appendChild(out);
-                                });
-                                activeProcesses[pid].last_index = proc.output.length;
-                                document.getElementById('console-output').scrollTop = document.getElementById('console-output').scrollHeight;
-                            }
-                        }
-                    });
-                }
-
-                // Global Event Log (Hop-by-hop)
-                if (data.history) {
-                    const monitor = document.getElementById('monitor-log');
-                    if (monitor) {
-                        monitor.innerHTML = '';
-                        data.history.forEach(h => {
-                            const row = document.createElement('div');
-                            row.style.marginBottom = '8px';
-                            row.style.borderLeft = `2px solid ${h.event === 'dropped' ? '#ef4444' : '#22c55e'}`;
-                            row.style.paddingLeft = '10px';
-                            row.innerHTML = `
-                                <div style="color:#eee; font-size:11px;"><b>[${h.event.toUpperCase()}]</b> ${h.packet_type}</div>
-                                <div style="color:#94a3b8; font-size:10px;">${h.src_node || '?'} &rarr; ${h.dst_node || '?'}</div>
-                                <div style="font-size:9px; color:#64748b">${h.details || h.reason || ''}</div>
-                            `;
-                            monitor.appendChild(row);
-                        });
+                    const activeTerm = window.terminalManager.activeDevice;
+                    if (activeTerm) {
+                        window.terminalManager.resizeTerminal(activeTerm);
                     }
-                }
+                }, 300);
+            }
+        }
 
-                // Update packet animations
-                if (data.packets) {
-                    updatePacketVisuals(data.packets);
+        async function autoConfigureRouting() {
+            try {
+                showToast("Configuring routes...");
+                const response = await fetch(`${API_URL}/auto-route`, { method: 'POST' });
+                if (response.ok) {
+                    showToast("Routing tables updated successfully");
+                    await fetchState();
+                    if (selectedNodeId) {
+                        const nodeRes = await fetch(`${API_URL}/devices/${selectedNodeId}`);
+                        selectedNodeData = await nodeRes.json();
+                        updateInspectionTables(selectedNodeData);
+                    }
+                } else {
+                    showToast("Failed to auto-configure routing", 'danger');
                 }
-            };
-            socket.onclose = () => setTimeout(initWebSocket, 2000);
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to auto-configure routing", 'danger');
+            }
+        }
+
+        async function resetTopology() {
+            if (!confirm('Are you sure you want to reset the entire topology? This will remove all devices and links.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/reset`, { method: 'POST' });
+
+                if (response.ok) {
+                    clearSelection();
+                    await fetchState();
+                    showToast("Topology reset successfully");
+                } else {
+                    const err = await response.json();
+                    showToast(err.detail || "Failed to reset topology", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to reset topology", 'danger');
+            }
+        }
+
+        async function shutdownServer() {
+            if (!confirm('Are you sure you want to shut down the server?')) {
+                return;
+            }
+
+            try {
+                // Send shutdown request
+                fetch(`${API_URL}/shutdown`, { method: 'POST' });
+
+                // Show offline overlay immediately
+                showToast("Server shutting down...", 'warning');
+
+                setTimeout(() => {
+                    document.body.innerHTML = `
+                        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100vh; color:#fff; background:#0f172a;">
+                            <i class="material-icons-round" style="font-size:64px; color:#ef4444; margin-bottom:20px;">power_off</i>
+                            <h2>Server Offline</h2>
+                            <p style="color:#94a3b8; margin-top:10px;">The network emulator server has been shut down.</p>
+                            <p style="color:#94a3b8;">Close this tab or restart the server to continue.</p>
+                        </div>
+                    `;
+                }, 1000);
+
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to send shutdown command", 'danger');
+            }
         }
 
         async function saveNodeProperties() {
@@ -1763,70 +1619,477 @@
             const gateway = document.getElementById('prop-gateway').value;
 
             try {
-                const response = await fetch(`${API_URL}/topology/node/${selectedNodeId}`, {
+                const response = await fetch(`${API_URL}/devices/${selectedNodeId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        hostname: hostname,
-                        gateway: gateway === '' ? null : gateway
-                    })
+                    body: JSON.stringify((() => {
+                        const b = { name: hostname };
+                        if (document.getElementById('prop-gateway').parentElement.style.display !== 'none') {
+                            b.default_gateway = gateway;
+                        }
+                        return b;
+                    })())
                 });
 
-                const result = await response.json();
                 if (response.ok) {
-                    showToast("Node properties updated");
-                    // If hostname changed, update our selection reference
-                    if (hostname !== selectedNodeId) {
-                        selectedNodeId = hostname;
+                    const data = await response.json();
+                    if (data.warning) {
+                        showToast(data.warning, 'warning'); // Show warning if present
+                    } else {
+                        showToast("Node properties saved");
                     }
+                    const newId = data.name || selectedNodeId;
+
+                    // Refresh current node data
+                    const nodeRes = await fetch(`${API_URL}/devices/${newId}`);
+                    selectedNodeId = newId;
+                    selectedNodeData = await nodeRes.json();
+
+                    updatePropertiesPanel(selectedNodeData);
                     await fetchState();
-                    // Re-select to update variables
-                    selectNode(selectedNodeId);
                 } else {
-                    showToast(`Error: ${result.detail || 'Update failed'}`, 'danger');
+                    const error = await response.json();
+                    showToast(error.detail || "Failed to save properties", 'danger');
+                    // Revert UI change
+                    await fetchState();
+                    if (selectedNodeData) updatePropertiesPanel(selectedNodeData);
                 }
             } catch (e) {
                 console.error(e);
-                showToast("Failed to connect to server", 'danger');
+                showToast("Failed to save properties: " + e.message, 'danger');
+                // Revert UI change
+                await fetchState();
+                if (selectedNodeData) updatePropertiesPanel(selectedNodeData);
             }
         }
 
-        // --- Packet Animation ---
-        let activePacketVisuals = {}; // packet_id -> { src, dst, progress }
+        async function toggleICMP() {
+            if (!selectedNodeId) return;
 
-        function renderPacketAnimations() {
-            if (!network) return;
-            const canvas = network.canvas.frame.canvas;
-            const ctx = canvas.getContext('2d');
+            try {
+                // Determine action based on current state (green = active = unblock, red = inactive = block)
+                const icmpBtn = document.getElementById('btn-toggle-icmp');
+                const isCurrentlyBlocked = icmpBtn.classList.contains('btn-success');
+                const method = isCurrentlyBlocked ? 'DELETE' : 'POST';
+                const url = isCurrentlyBlocked
+                    ? `${API_URL}/failures/${selectedNodeId}/block_icmp`
+                    : `${API_URL}/failures`;
 
-            // Draw packets on edges
-            for (const [pid, pkt] of Object.entries(activePacketVisuals)) {
-                const srcPos = network.getPositions([pkt.src])[pkt.src];
-                const dstPos = network.getPositions([pkt.dst])[pkt.dst];
+                const body = isCurrentlyBlocked ? undefined : JSON.stringify({
+                    device: selectedNodeId,
+                    failure_type: 'block_icmp'
+                });
 
-                if (!srcPos || !dstPos) continue;
+                const response = await fetch(url, {
+                    method: method,
+                    headers: isCurrentlyBlocked ? {} : { 'Content-Type': 'application/json' },
+                    body: body
+                });
 
-                const x = srcPos.x + (dstPos.x - srcPos.x) * pkt.progress;
-                const y = srcPos.y + (dstPos.y - srcPos.y) * pkt.progress;
+                if (response.ok) {
+                    const msg = isCurrentlyBlocked ? "ICMP Unblocked" : "ICMP Blocked";
+                    showToast(msg, 'success');
 
-                // Convert to canvas coordinates
-                const canvasPos = network.canvasToDOM({ x, y });
+                    // Refresh node data to update UI
+                    fetchState(); // fetches all, updates selectedNodeData if selected
 
-                ctx.beginPath();
-                ctx.arc(canvasPos.x, canvasPos.y, 5, 0, 2 * Math.PI);
-                ctx.fillStyle = pkt.type === 'ICMP' ? '#22c55e' : pkt.type === 'TCP' ? '#3b82f6' : '#f59e0b';
-                ctx.fill();
-                ctx.strokeStyle = '#fff';
-                ctx.lineWidth = 2;
-                ctx.stroke();
+                    // Manually trigger immediate UI update if waiting for fetchState is too slow
+                    // But fetchState runs every 5s anyway. Let's force a fetch for the specific node.
+                    const nodeRes = await fetch(`${API_URL}/devices/${selectedNodeId}`);
+                    selectedNodeData = await nodeRes.json();
+                    updateFailureControls(selectedNodeData);
+                } else {
+                    showToast("Failed to toggle ICMP", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to toggle ICMP: " + e.message, 'danger');
             }
         }
 
-        // --- Resizer Logic Updated ---
+        async function toggleSilentMode() {
+            if (!selectedNodeId) return;
+
+            try {
+                const silentBtn = document.getElementById('btn-toggle-silent');
+                const isCurrentlySilent = silentBtn.classList.contains('btn-success');
+                const method = isCurrentlySilent ? 'DELETE' : 'POST';
+                const url = isCurrentlySilent
+                    ? `${API_URL}/failures/${selectedNodeId}/silent_router`
+                    : `${API_URL}/failures`;
+
+                const body = isCurrentlySilent ? undefined : JSON.stringify({
+                    device: selectedNodeId,
+                    failure_type: 'silent_router'
+                });
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: isCurrentlySilent ? {} : { 'Content-Type': 'application/json' },
+                    body: body
+                });
+
+                if (response.ok) {
+                    const msg = isCurrentlySilent ? "Silent Mode Disabled" : "Silent Mode Enabled";
+                    showToast(msg, 'success');
+
+                    // Refresh node data to update UI
+                    const nodeRes = await fetch(`${API_URL}/devices/${selectedNodeId}`);
+                    selectedNodeData = await nodeRes.json();
+                    updateFailureControls(selectedNodeData);
+                } else {
+                    showToast("Failed to toggle silent mode", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to toggle silent mode", 'danger');
+            }
+        }
+
+        async function addStaticRoute() {
+            if (!selectedNodeId) return;
+
+            const dest = document.getElementById('route-dest').value.trim();
+            const gw = document.getElementById('route-gw').value.trim();
+
+            if (!dest || !gw) {
+                showToast("Please provide both destination and gateway", "danger");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/routes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        device: selectedNodeId,
+                        destination: dest,
+                        gateway: gw
+                    })
+                });
+
+                if (response.ok) {
+                    showToast("Route added successfully");
+                    document.getElementById('route-dest').value = '';
+                    document.getElementById('route-gw').value = '';
+
+                    // Refresh data
+                    const nodeRes = await fetch(`${API_URL}/devices/${selectedNodeId}`);
+                    selectedNodeData = await nodeRes.json();
+                    updateInspectionTables(selectedNodeData);
+                } else {
+                    const err = await response.json();
+                    showToast(err.detail || "Failed to add route", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to add route", 'danger');
+            }
+        }
+
+        async function toggleInterface(ifaceName, currentState, buttonElement) {
+            if (!selectedNodeId) return;
+
+            const newState = currentState === 'up' ? 'down' : 'up';
+
+            try {
+                const response = await fetch(`${API_URL}/failures/interface/${selectedNodeId}/${ifaceName}/${newState}`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    if (newState === 'up') {
+                        buttonElement.className = 'btn btn-success';
+                        buttonElement.innerHTML = `
+                            <i class="material-icons-round" style="font-size: 14px; vertical-align: middle;">arrow_upward</i>
+                            UP
+                        `;
+                        buttonElement.onclick = () => toggleInterface(ifaceName, 'up', buttonElement);
+                    } else {
+                        buttonElement.className = 'btn btn-danger';
+                        buttonElement.innerHTML = `
+                            <i class="material-icons-round" style="font-size: 14px; vertical-align: middle;">arrow_downward</i>
+                            DOWN
+                        `;
+                        buttonElement.onclick = () => toggleInterface(ifaceName, 'down', buttonElement);
+                    }
+                    showToast(`Interface ${ifaceName} set to ${newState.toUpperCase()}`);
+                } else {
+                    showToast(`Failed to set interface ${newState}`, 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast(`Failed to set interface ${newState}`, 'danger');
+            }
+        }
+
+        async function deleteSelectedNode() {
+            if (!selectedNodeId) return;
+
+            if (!confirm(`Are you sure you want to delete ${selectedNodeId}?`)) return;
+
+            try {
+                const response = await fetch(`${API_URL}/devices/${selectedNodeId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showToast("Node deleted");
+                    clearSelection();
+                    await fetchState();
+                } else {
+                    showToast("Failed to delete node", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to delete node", 'danger');
+            }
+        }
+
+        async function deleteLink(linkId) {
+            if (!confirm("Are you sure you want to delete this link?")) return;
+
+            try {
+                const response = await fetch(`${API_URL}/links/${linkId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showToast("Link deleted");
+                    clearSelection();
+                    await fetchState();
+                } else {
+                    showToast("Failed to delete link", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to delete link", 'danger');
+            }
+        }
+
+        let lastNodeOffset = 0;
+
+        async function addNodeToTopology(type) {
+            const name = prompt(`Enter ${type} name:`);
+            if (!name) return;
+
+            // Calculate position: Center of view + offset
+            let x = 0, y = 0;
+            if (network) {
+                const center = network.getViewPosition();
+                // Add a spiral or stair-step offset to avoid direct overlaps
+                lastNodeOffset = (lastNodeOffset + 1) % 8;
+                const offsetStep = 50;
+                x = Math.round(center.x + (lastNodeOffset * 40));
+                y = Math.round(center.y + (lastNodeOffset * 40));
+            } else {
+                x = Math.floor(Math.random() * 600) + 100;
+                y = Math.floor(Math.random() * 400) + 100;
+            }
+
+            try {
+                await fetch(`${API_URL}/devices`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, device_type: type, x: x, y: y })
+                });
+
+                await fetchState();
+                showToast(`${type} created`);
+
+                // Trigger animation with current settings
+                if (network) {
+                    network.setOptions({ physics: { enabled: true } });
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to create node", 'danger');
+            }
+        }
+
+        async function createTopology(type) {
+            const count = prompt(`Enter number of devices for ${type} topology:`);
+            if (!count || isNaN(count)) return;
+
+            try {
+                const response = await fetch(`${API_URL}/topologies`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, device_count: parseInt(count) })
+                });
+
+                if (response.ok) {
+                    showToast(`${type} topology created`);
+                    setTimeout(() => fetchState(), 500);
+
+                    // Trigger animation
+                    if (network) {
+                        network.setOptions({ physics: { enabled: true } });
+                    }
+                } else {
+                    const err = await response.json();
+                    showToast(err.detail || "Failed to create topology", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to create topology", 'danger');
+            }
+        }
+
+        async function updateNodePosition(id, x, y) {
+            try {
+                await fetch(`${API_URL}/devices/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ x: Math.round(x), y: Math.round(y) })
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function handleLinkClick(nodeId) {
+            if (!linkSource) {
+                linkSource = nodeId;
+                showToast("Select target node");
+                fetchState();
+            } else {
+                if (linkSource === nodeId) {
+                    showToast("Cannot link node to itself", 'danger');
+                    linkSource = null;
+                    if (edgesDataSet.get('temp-link')) {
+                        edgesDataSet.remove('temp-link');
+                    }
+                    fetchState();
+                    return;
+                }
+
+                createLink(linkSource, nodeId);
+                linkSource = null;
+                if (edgesDataSet.get('temp-link')) {
+                    edgesDataSet.remove('temp-link');
+                }
+                fetchState();
+            }
+        }
+
+        async function createLink(source, target) {
+            try {
+                const response = await fetch(`${API_URL}/links`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        device_a: source,
+                        device_b: target,
+                        latency_ms: 10,
+                        bandwidth_mbps: 100,
+                        packet_loss_percent: 0
+                    })
+                });
+
+                if (response.ok) {
+                    showToast("Link created");
+                    setTimeout(() => fetchState(), 500);
+                } else {
+                    showToast("Failed to create link", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to create link", 'danger');
+            }
+        }
+
+        function switchTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tool-${tool}`).classList.add('active');
+
+            if (tool !== 'link') {
+                if (linkSource) {
+                    linkSource = null;
+                    if (edgesDataSet.get('temp-link')) {
+                        edgesDataSet.remove('temp-link');
+                    }
+                    fetchState();
+                }
+            }
+
+            if (tool === 'link') {
+                if (network) network.setOptions({ interaction: { dragNodes: false, dragView: true } });
+                showToast("Link Mode: Click source node, then target node");
+            } else if (tool === 'pan') {
+                if (network) network.setOptions({ interaction: { dragNodes: false, dragView: true } });
+            } else {
+                if (network) network.setOptions({ interaction: { dragNodes: true, dragView: true } });
+            }
+        }
+
+        let packetHistory = [];
+        const MAX_HISTORY = 50;
+
+        function initWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/packets`;
+
+            const socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => console.log('WebSocket connected');
+            socket.onmessage = (event) => {
+                const packet = JSON.parse(event.data);
+
+                // --- Log Logic ---
+                packetHistory.unshift(packet);
+                if (packetHistory.length > MAX_HISTORY) {
+                    packetHistory.pop();
+                }
+
+                const monitor = document.getElementById('monitor-log');
+                if (monitor) {
+                    // Only rebuild if tab is active to save DOM ops? 
+                    // No, rebuild always so it's ready. Optimization: only update first child?
+                    // Let's keep simple full rebuild for now or simplified prepend.
+
+                    const row = document.createElement('div');
+                    row.style.marginBottom = '8px';
+                    row.style.borderLeft = `2px solid ${packet.protocol === 'ICMP' ? '#3b82f6' : '#10b981'}`;
+                    row.style.paddingLeft = '10px';
+                    row.style.fontSize = '11px';
+
+                    const time = new Date(packet.timestamp * 1000).toLocaleTimeString();
+
+                    row.innerHTML = `
+                        <div style="color:#eee;"><b>[${packet.protocol}]</b> ${packet.packet_type} <span style="color:#64748b; font-size:9px;">${time}</span></div>
+                        <div style="color:#94a3b8; font-size:10px;">
+                            ${packet.namespace}:${packet.interface} | ${packet.src_ip || '?'} &rarr; ${packet.dst_ip || '?'}
+                        </div>
+                        ${packet.ttl ? `<div style="font-size:9px; color:#64748b">TTL: ${packet.ttl}</div>` : ''}
+                    `;
+
+                    monitor.insertBefore(row, monitor.firstChild);
+                    if (monitor.children.length > MAX_HISTORY) {
+                        monitor.removeChild(monitor.lastChild);
+                    }
+                }
+            };
+            socket.onclose = () => setTimeout(initWebSocket, 2000);
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.background = type === 'danger' ? 'var(--danger)' : 'var(--success)';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Resizer logic
         let isResizingSidebar = false;
         let isResizingTerminal = false;
         let isResizingLeft = false;
-
         let startX = 0;
         let startY = 0;
         let startWidth = 0;
@@ -1859,17 +2122,28 @@
                 const delta = startX - e.clientX;
                 const newWidth = Math.max(280, Math.min(600, startWidth + delta));
                 document.getElementById('properties-panel').style.width = newWidth + 'px';
+                document.getElementById('terminal-panel').style.right = newWidth + 'px';
+                if (window.terminalManager && window.terminalManager.activeDevice) {
+                    window.terminalManager.resizeTerminal(window.terminalManager.activeDevice);
+                }
             }
             if (isResizingLeft) {
                 const delta = e.clientX - startX;
-                const newWidth = Math.max(64, Math.min(300, startLeftWidth + delta));
+                const newWidth = Math.max(60, Math.min(200, startLeftWidth + delta));
                 document.getElementById('node-palette').style.width = newWidth + 'px';
+                document.getElementById('terminal-panel').style.left = newWidth + 'px';
+                if (window.terminalManager && window.terminalManager.activeDevice) {
+                    window.terminalManager.resizeTerminal(window.terminalManager.activeDevice);
+                }
             }
             if (isResizingTerminal) {
-                // Since terminal is absolute bottom, dragging up increases height
                 const delta = startY - e.clientY;
-                const newHeight = Math.max(200, Math.min(800, startHeight + delta));
+                const newHeight = Math.max(100, Math.min(600, startHeight + delta));
                 document.getElementById('terminal-panel').style.height = newHeight + 'px';
+                // Trigger terminal resize
+                if (window.terminalManager && window.terminalManager.activeDevice) {
+                    window.terminalManager.resizeTerminal(window.terminalManager.activeDevice);
+                }
             }
         });
 
@@ -1879,172 +2153,47 @@
             isResizingLeft = false;
         });
 
-        // --- Node Palette ---
-        async function addNodeToTopology(type) {
-            const name = prompt(`Enter name for new ${type}:`);
-            if (!name) return;
+        function updatePhysicsSettings(val) {
+            const length = parseInt(val);
+            if (!network) return;
 
-            try {
-                const response = await fetch(`${API_URL}/devices`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, type })
-                });
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.detail);
-                }
-                fetchState();
-            } catch (e) {
-                alert('Failed to add node: ' + e.message);
-            }
-        }
-
-        async function createLink(source, target) {
-            try {
-                const response = await fetch(`${API_URL}/links`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ device_a: source, device_b: target, latency_ms: 10 })
-                });
-                if (!response.ok) {
-                    const err = await response.json();
-                    throw new Error(err.detail);
-                }
-                fetchState();
-                showToast("Link created successfully");
-            } catch (e) {
-                alert('Failed to create link: ' + e.message);
-            }
-        }
-
-        async function deleteSelectedNode() {
-            if (!selectedNodeId) return;
-            if (!confirm(`Delete node ${selectedNodeId}?`)) return;
-
-            try {
-                await fetch(`${API_URL}/devices/${selectedNodeId}`, { method: 'DELETE' });
-                clearSelection();
-                fetchState();
-            } catch (e) {
-                alert('Failed to delete node: ' + e.message);
-            }
-        }
-
-        async function deleteSelectedLink(linkId) {
-            if (!confirm(`Delete link?`)) return;
-            try {
-                await fetch(`${API_URL}/links/${linkId}`, { method: 'DELETE' });
-                clearSelection();
-                fetchState();
-            } catch (e) {
-                alert('Failed to delete link: ' + e.message);
-            }
-        }
-
-        // Init
-        initGraph();
-        fetchState();
-        initWebSocket();
-        setInterval(fetchState, 2000);
-
-        // Animation loop
-        setInterval(() => {
-            renderPacketAnimations();
-        }, 50);
-
-        // Update packet visuals from WebSocket
-        function updatePacketVisuals(packets) {
-            activePacketVisuals = {};
-            packets.forEach(p => {
-                activePacketVisuals[p.id] = {
-                    src: p.src,
-                    dst: p.dst,
-                    progress: p.progress,
-                    type: p.type
-                };
-            });
-        }
-
-        // --- ANSI Helper ---
-        function ansiToHtml(text) {
-            if (!text) return "";
-
-            const colors = {
-                // Normal colors
-                '30': '#1e293b', // black
-                '31': '#ef4444', // red
-                '32': '#10b981', // green
-                '33': '#f59e0b', // yellow
-                '34': '#3b82f6', // blue
-                '35': '#a855f7', // magenta
-                '36': '#06b6d4', // cyan
-                '37': '#e2e8f0', // white
-                // Bright colors
-                '90': '#475569', // bright black (gray)
-                '91': '#f87171', // bright red
-                '92': '#34d399', // bright green
-                '93': '#fbbf24', // bright yellow
-                '94': '#60a5fa', // bright blue
-                '95': '#c084fc', // bright magenta
-                '96': '#22d3ee', // bright cyan
-                '97': '#f1f5f9'  // bright white
-            };
-
-            // Escape HTML
-            let html = text
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;');
-
-            // Handle ANSI escape sequences
-            html = html.replace(/\\x1b\[([0-9;]+)m/g, (match, code) => {
-                if (code === '0') return '</span>';
-
-                const parts = code.split(';');
-                let styles = [];
-
-                for (let p of parts) {
-                    if (p === '1') {
-                        styles.push('font-weight:bold');
-                    } else if (p === '4') {
-                        styles.push('text-decoration:underline');
-                    } else if (colors[p]) {
-                        styles.push('color:' + colors[p]);
+            network.setOptions({
+                physics: {
+                    barnesHut: {
+                        springLength: length
                     }
                 }
-
-                return styles.length > 0 ? `<span style="${styles.join(';')}">` : '';
             });
 
-            // Handle \\033 format (octal escape)
-            html = html.replace(/\\033\[([0-9;]+)m/g, (match, code) => {
-                if (code === '0') return '</span>';
+            // Briefly enable physics to adjust to new length
+            network.setOptions({ physics: { enabled: true } });
+            setTimeout(() => {
+                network.setOptions({ physics: { enabled: false } });
 
-                const parts = code.split(';');
-                let styles = [];
-
-                for (let p of parts) {
-                    if (p === '1') {
-                        styles.push('font-weight:bold');
-                    } else if (p === '4') {
-                        styles.push('text-decoration:underline');
-                    } else if (colors[p]) {
-                        styles.push('color:' + colors[p]);
-                    }
-                }
-
-                return styles.length > 0 ? `<span style="${styles.join(';')}">` : '';
-            });
-
-            return html;
+                // Save positions efficiently
+                const positions = network.getPositions();
+                batchUpdatePositions(positions);
+            }, 1500);
         }
 
+        async function batchUpdatePositions(positions) {
+            const updates = {};
+            for (const [id, pos] of Object.entries(positions)) {
+                updates[id] = { x: Math.round(pos.x), y: Math.round(pos.y) };
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/devices/batch/update`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ updates })
+                });
+                // Optional: showToast if needed, but keep silent to avoid spam
+            } catch (e) {
+                console.error("Batch update failed", e);
+            }
+        }
     </script>
-
-    <!-- API Client and Terminal Manager -->
-    <script src="static/api-client.js"></script>
-    <script src="static/terminal.js"></script>
 </body>
 
 </html>

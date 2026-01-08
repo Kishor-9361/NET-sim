@@ -96,13 +96,13 @@ class PTYManager:
                     
                     # Set environment variables
                     os.environ['TERM'] = 'xterm-256color'
-                    os.environ['PS1'] = r'\u@\h:\w\$ '
+                    os.environ['HOME'] = '/root'
+                    os.environ['PS1'] = f'[{namespace}] \\u@\\h:\\w\\$ '
                     
-                    # Execute bash in namespace
-                    os.execvp('sudo', [
-                        'sudo',
+                    # Execute bash in namespace directly (no sudo needed since server is root)
+                    os.execvp('ip', [
                         'ip', 'netns', 'exec', namespace,
-                        '/bin/bash', '--norc', '--noprofile'
+                        '/bin/bash', '-i'
                     ])
                     
                 except Exception as e:

@@ -6,3 +6,7 @@ pydantic==2.5.0
 
 # Optional but recommended
 python-multipart==0.0.6
+
+# System Requirements (install via apt):
+# iputils-ping, traceroute, iproute2, net-tools, ifupdown
+# tcpdump, ethtool, nmap, netcat-openbsd, dnsutils

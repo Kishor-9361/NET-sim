@@ -23,6 +23,7 @@ class DeviceType(Enum):
     ROUTER = "router"
     SWITCH = "switch"
     DNS_SERVER = "dns_server"
+    SERVER = "server"
 
 
 @dataclass
@@ -140,6 +141,56 @@ class NamespaceManager:
             logger.error(f"Failed to create namespace '{name}': {e.stderr.decode()}")
             raise RuntimeError(f"Namespace creation failed: {e.stderr.decode()}")
     
+    def rename_namespace(self, old_name: str, new_name: str):
+        """Rename a network namespace"""
+        if old_name not in self.namespaces:
+            raise ValueError(f"Namespace '{old_name}' does not exist")
+        
+        try:
+            logger.info(f"Renaming namespace {old_name} to {new_name}")
+            
+            import os
+            # Determine correct path
+            base_path = "/var/run/netns"
+            if not os.path.exists(base_path) and os.path.exists("/run/netns"):
+                base_path = "/run/netns"
+                
+            old_path = f"{base_path}/{old_name}"
+            new_path = f"{base_path}/{new_name}"
+            
+            if not os.path.exists(old_path):
+                raise RuntimeError(f"Namespace mount point {old_path} not found")
+            
+            # Strategy 1: Attempt atomic move (rename)
+            # This often fails for bind mounts with "Device or resource busy"
+            try:
+                subprocess.run(['sudo', 'mv', old_path, new_path], check=True, stderr=subprocess.PIPE)
+            except subprocess.CalledProcessError:
+                logger.info("mv failed, attempting bind mount strategy")
+                
+                # Strategy 2: Bind mount new -> Unmount old
+                # 1. Create empty file for new mount point
+                subprocess.run(['sudo', 'touch', new_path], check=True)
+                
+                # 2. Bind mount old to new (preserves the namespace)
+                # The critical part: we bind the *file* old_path to new_path. 
+                # Since old_path is a bind mount to the netns, new_path becomes one too.
+                subprocess.run(['sudo', 'mount', '--bind', old_path, new_path], check=True)
+                
+                # 3. Unmount old - using lazy unmount to avoid busy errors
+                subprocess.run(['sudo', 'umount', '-l', old_path], check=True)
+                
+                # 4. Remove old file
+                subprocess.run(['sudo', 'rm', old_path], check=True)
+                 
+            ns = self.namespaces.pop(old_name)
+            ns.name = new_name
+            self.namespaces[new_name] = ns
+            
+        except Exception as e:
+            logger.error(f"Failed to rename namespace: {e}")
+            raise RuntimeError(f"Namespace rename failed: {e}")
+    
     def delete_namespace(self, name: str):
         """
         Delete a network namespace and cleanup all resources.
@@ -165,8 +216,15 @@ class NamespaceManager:
             logger.info(f"Namespace deleted successfully: {name}")
             
         except subprocess.CalledProcessError as e:
-            logger.error(f"Failed to delete namespace '{name}': {e.stderr.decode()}")
-            raise RuntimeError(f"Namespace deletion failed: {e.stderr.decode()}")
+            err_msg = e.stderr.decode()
+            if "No such file or directory" in err_msg:
+                logger.warning(f"Namespace '{name}' file missing during deletion (ignoring): {err_msg.strip()}")
+                if name in self.namespaces:
+                    del self.namespaces[name]
+                return
+
+            logger.error(f"Failed to delete namespace '{name}': {err_msg}")
+            raise RuntimeError(f"Namespace deletion failed: {err_msg}")
     
     def add_interface(self, namespace: str, interface_name: str, 
                      ip_address: str, netmask: str = "24") -> NetworkInterface:
@@ -250,7 +308,7 @@ class NamespaceManager:
         
         try:
             cmd = ['sudo', 'ip', 'netns', 'exec', namespace,
-                   'ip', 'route', 'add', destination, 'via', gateway]
+                   'ip', 'route', 'replace', destination, 'via', gateway]
             
             if interface:
                 cmd.extend(['dev', interface])
@@ -266,6 +324,25 @@ class NamespaceManager:
             if b"File exists" not in e.stderr:
                 logger.error(f"Failed to add route: {e.stderr.decode()}")
                 raise RuntimeError(f"Route addition failed: {e.stderr.decode()}")
+    
+    def remove_route(self, namespace: str, destination: str):
+        """Remove a route from a namespace"""
+        if namespace not in self.namespaces:
+            raise ValueError(f"Namespace '{namespace}' does not exist")
+        
+        try:
+            logger.info(f"Removing route in {namespace}: {destination}")
+            subprocess.run([
+                'sudo', 'ip', 'netns', 'exec', namespace,
+                'ip', 'route', 'delete', destination
+            ], capture_output=True)
+            
+            # Update routing table cache
+            self._update_routing_table(namespace)
+            
+        except Exception as e:
+            logger.error(f"Failed to remove route: {e}")
+            # We don't raise here because the route might already be gone
     
     def get_routing_table(self, namespace: str) -> List[Dict]:
         """
@@ -294,8 +371,20 @@ class NamespaceManager:
             
             routes = []
             for line in result.stdout.decode().strip().split('\n'):
-                if line:
-                    routes.append({'raw': line})
+                if not line: continue
+                parts = line.split()
+                route = {'raw': line}
+                if 'default' in line:
+                    route['destination'] = '0.0.0.0/0'
+                    if 'via' in parts:
+                        route['gateway'] = parts[parts.index('via') + 1]
+                else:
+                    route['destination'] = parts[0]
+                
+                if 'dev' in parts:
+                    route['interface'] = parts[parts.index('dev') + 1]
+                
+                routes.append(route)
             
             self.namespaces[namespace].routing_table = routes
             
@@ -324,8 +413,18 @@ class NamespaceManager:
             
             arp_entries = []
             for line in result.stdout.decode().strip().split('\n'):
-                if line:
-                    arp_entries.append({'raw': line})
+                if not line: continue
+                parts = line.split()
+                # 10.0.1.2 dev eth0 lladdr 52:54:00:12:34:56 REACHABLE
+                entry = {'raw': line}
+                if len(parts) >= 1:
+                    entry['ip'] = parts[0]
+                if 'lladdr' in parts:
+                    entry['mac'] = parts[parts.index('lladdr') + 1]
+                if 'REACHABLE' in parts or 'STALE' in parts or 'DELAY' in parts:
+                    entry['state'] = parts[-1]
+                
+                arp_entries.append(entry)
             
             self.namespaces[namespace].arp_cache = arp_entries
             return arp_entries
@@ -334,6 +433,39 @@ class NamespaceManager:
             logger.error(f"Failed to get ARP cache: {e.stderr.decode()}")
             return []
     
+    def get_active_sockets(self, namespace: str) -> List[Dict]:
+        """Get active TCP/UDP sockets from namespace using ss"""
+        if namespace not in self.namespaces:
+            return []
+            
+        try:
+            result = subprocess.run(
+                ['sudo', 'ip', 'netns', 'exec', namespace, 'ss', '-tun'],
+                check=True,
+                capture_output=True
+            )
+            
+            sockets = []
+            output = result.stdout.decode().strip()
+            if not output:
+                return []
+                
+            lines = output.split('\n')
+            # Netid State Recv-Q Send-Q Local Address:Port Peer Address:Port
+            for line in lines[1:]:
+                parts = line.split()
+                if len(parts) >= 5:
+                    sockets.append({
+                        'protocol': parts[0],
+                        'state': parts[1],
+                        'local': parts[4],
+                        'remote': parts[5] if len(parts) > 5 else '*:*'
+                    })
+            return sockets
+        except Exception as e:
+            logger.error(f"Failed to get sockets: {e}")
+            return []
+
     def set_interface_state(self, namespace: str, interface: str, state: str):
         """
         Set interface state (up/down).
@@ -367,6 +499,103 @@ class NamespaceManager:
         except subprocess.CalledProcessError as e:
             logger.error(f"Failed to set interface state: {e.stderr.decode()}")
             raise RuntimeError(f"Interface state change failed: {e.stderr.decode()}")
+
+    def set_interface_up(self, namespace: str, interface: str):
+        """Alias for set_interface_state(..., 'up')"""
+        self.set_interface_state(namespace, interface, "up")
+
+    def set_interface_down(self, namespace: str, interface: str):
+        """Alias for set_interface_state(..., 'down')"""
+        self.set_interface_state(namespace, interface, "down")
+
+    def block_icmp(self, namespace: str):
+        """
+        Block ICMP Echo Requests (Ping) destined for this device.
+        Allows forwarding and outgoing pings.
+        """
+        try:
+            # Block incoming echo requests only (Stealth Mode)
+            subprocess.run(
+                ['sudo', 'ip', 'netns', 'exec', namespace,
+                 'iptables', '-A', 'INPUT', '-p', 'icmp', '--icmp-type', 'echo-request', '-j', 'DROP'],
+                check=True,
+                capture_output=True
+            )
+            logger.info(f"Blocked ICMP Echo Requests (INPUT) in {namespace}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to block ICMP: {e.stderr.decode()}")
+            raise RuntimeError(f"Failed to apply ICMP block: {e.stderr.decode()}")
+
+    def unblock_icmp(self, namespace: str):
+        """Unblock ICMP packets"""
+        try:
+            # 1. Cleanup aggressive rules from previous version (All chains, all types)
+            for chain in ['INPUT', 'OUTPUT', 'FORWARD']:
+                subprocess.run(
+                    ['sudo', 'ip', 'netns', 'exec', namespace,
+                     'iptables', '-D', chain, '-p', 'icmp', '-j', 'DROP'],
+                    check=False,
+                    capture_output=True
+                )
+            
+            # 2. Cleanup specific rule (Standard)
+            subprocess.run(
+                ['sudo', 'ip', 'netns', 'exec', namespace,
+                 'iptables', '-D', 'INPUT', '-p', 'icmp', '--icmp-type', 'echo-request', '-j', 'DROP'],
+                check=False,
+                capture_output=True
+            )
+            
+            logger.info(f"Unblocked ICMP in {namespace}")
+        except Exception as e:
+            logger.error(f"Failed to unblock ICMP: {e}")
+
+    def enable_silent_router(self, namespace: str):
+        """Enable silent router mode (disable IP forwarding)"""
+        try:
+            subprocess.run(
+                ['sudo', 'ip', 'netns', 'exec', namespace,
+                 'sysctl', '-w', 'net.ipv4.ip_forward=0'],
+                check=True,
+                capture_output=True
+            )
+            logger.info(f"Enabled silent router in {namespace}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to enable silent router: {e.stderr.decode()}")
+
+    def disable_silent_router(self, namespace: str):
+        """Disable silent router mode (enable IP forwarding)"""
+        try:
+            subprocess.run(
+                ['sudo', 'ip', 'netns', 'exec', namespace,
+                 'sysctl', '-w', 'net.ipv4.ip_forward=1'],
+                check=True,
+                capture_output=True
+            )
+            logger.info(f"Disabled silent router in {namespace}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to disable silent router: {e.stderr.decode()}")
+
+    def enable_packet_loss(self, namespace: str, interface: str, percentage: float):
+        """Enable packet loss using tc netem"""
+        try:
+            # Try to add rule, if exists replace it
+            subprocess.run(
+                ['sudo', 'ip', 'netns', 'exec', namespace,
+                 'tc', 'qdisc', 'add', 'dev', interface, 'root', 'netem', 'loss', f'{percentage}%'],
+                check=False,
+                capture_output=True
+            )
+            # If add failed, try replace
+            subprocess.run(
+                ['sudo', 'ip', 'netns', 'exec', namespace,
+                 'tc', 'qdisc', 'replace', 'dev', interface, 'root', 'netem', 'loss', f'{percentage}%'],
+                check=True,
+                capture_output=True
+            )
+            logger.info(f"Enabled {percentage}% packet loss on {namespace}:{interface}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Failed to enable packet loss: {e.stderr.decode()}")
     
     def list_namespaces(self) -> List[str]:
         """

@@ -75,12 +75,15 @@ class TerminalManager {
         fitAddon.fit();
 
         // Connect to WebSocket
-        const ws = this.connectWebSocket(deviceName, term);
+        const ws = this.connectWebSocket(deviceName, term, fitAddon);
 
         // Handle terminal input
         term.onData((data) => {
             if (ws.readyState === WebSocket.OPEN) {
-                ws.send(data);
+                ws.send(JSON.stringify({
+                    type: 'input',
+                    data: data
+                }));
             }
         });
 
@@ -98,7 +101,7 @@ class TerminalManager {
         // Handle window resize
         window.addEventListener('resize', () => {
             if (this.activeDevice === deviceName) {
-                fitAddon.fit();
+                this.resizeTerminal(deviceName);
             }
         });
 
@@ -115,7 +118,7 @@ class TerminalManager {
     /**
      * Connect WebSocket to backend
      */
-    connectWebSocket(deviceName, term) {
+    connectWebSocket(deviceName, term, fitAddon) {
         const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${protocol}//${window.location.host}/ws/terminal/${deviceName}`;
 
@@ -127,6 +130,21 @@ class TerminalManager {
             console.log(`WebSocket connected for ${deviceName}`);
             term.writeln('\x1b[1;32m✓ Connected to device\x1b[0m');
             term.writeln('');
+
+            // Send initial resize
+            try {
+                fitAddon.fit();
+                const dims = fitAddon.proposeDimensions();
+                if (dims) {
+                    ws.send(JSON.stringify({
+                        type: 'resize',
+                        rows: dims.rows,
+                        cols: dims.cols
+                    }));
+                }
+            } catch (e) {
+                console.error("Error sending initial resize:", e);
+            }
         };
 
         ws.onmessage = (event) => {
@@ -162,7 +180,7 @@ class TerminalManager {
         const termInfo = this.terminals.get(deviceName);
         if (termInfo) {
             termInfo.container.style.display = 'block';
-            termInfo.fitAddon.fit();
+            setTimeout(() => this.resizeTerminal(deviceName), 50); // Ensure it's sized correctly
             termInfo.term.focus();
             this.activeDevice = deviceName;
 
@@ -237,7 +255,10 @@ class TerminalManager {
     sendCommand(deviceName, command) {
         const termInfo = this.terminals.get(deviceName);
         if (termInfo && termInfo.websocket.readyState === WebSocket.OPEN) {
-            termInfo.websocket.send(command + '\n');
+            termInfo.websocket.send(JSON.stringify({
+                type: 'input',
+                data: command + '\n'
+            }));
         }
     }
 
@@ -248,6 +269,14 @@ class TerminalManager {
         const termInfo = this.terminals.get(deviceName);
         if (termInfo) {
             termInfo.fitAddon.fit();
+            const dims = termInfo.fitAddon.proposeDimensions();
+            if (dims && termInfo.websocket.readyState === WebSocket.OPEN) {
+                termInfo.websocket.send(JSON.stringify({
+                    type: 'resize',
+                    rows: dims.rows,
+                    cols: dims.cols
+                }));
+            }
         }
     }
 

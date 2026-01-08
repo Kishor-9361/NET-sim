@@ -70,9 +70,21 @@ fi
 echo -e "${GREEN}✓${NC} Network namespaces supported"
 
 # Clean up any existing namespaces from previous runs
-echo -e "${BLUE}  Cleaning up previous namespaces...${NC}"
+echo -e "${BLUE}  Cleaning up previous namespaces and interfaces...${NC}"
 for ns in $(ip netns list | awk '{print $1}'); do
     ip netns delete "$ns" 2>/dev/null || true
+done
+
+# Clean up bridges starting with br-
+for br in $(ip link show type bridge | awk -F': ' '{print $2}'); do
+    if [[ $br == br-* ]]; then
+        ip link delete "$br" type bridge 2>/dev/null || true
+    fi
+done
+
+# Clean up any stray veth interfaces
+for veth in $(ip link show | grep -o 'veth-[a-f0-9]*'); do
+    ip link delete "$veth" 2>/dev/null || true
 done
 
 echo -e "${GREEN}✓${NC} Cleanup complete"
