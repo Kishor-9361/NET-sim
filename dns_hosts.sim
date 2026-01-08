@@ -1,0 +1,9 @@
+10.0.1.1 r1 r1.lan
+10.0.1.2 r2 r2.lan
+10.0.2.2 r3 r3.lan
+10.0.4.1 sw1 sw1.lan
+10.0.4.3 h1 h1.lan
+10.0.4.4 h2 h2.lan
+10.0.5.1 h3 h3.lan
+10.0.6.1 srv1 srv1.lan
+10.0.7.1 dns1 dns1.lan
