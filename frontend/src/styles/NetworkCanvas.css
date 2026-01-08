@@ -1,0 +1,5 @@
+.network-canvas {
+  flex: 1;
+  background: var(--bg-primary);
+  cursor: crosshair;
+}

@@ -1,0 +1,1940 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NET-sim</title>
+
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" href="https://fonts.gstatic.com/s/i/short-term/release/googlesymbols/storage/default/24px.svg">
+
+    <!-- xterm.js for real terminal emulation -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+
+    <!-- vis-network for topology visualization -->
+    <script src="https://unpkg.com/vis-network@9.1.2/standalone/umd/vis-network.min.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-main: #f1f5f9;
+            --text-mute: #94a3b8;
+            --border: #475569;
+            --primary: #3b82f6;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-main);
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Layout */
+        #app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* Toolbar */
+        #toolbar {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .logo {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tools {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .tool-btn {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: var(--primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .tool-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .tool-btn.active {
+            background: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), #2563eb);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+            width: 100%;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.3);
+            filter: brightness(1.1);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+        }
+
+        .btn-success:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+            filter: brightness(1.1);
+        }
+
+        /* Workspace */
+        #workspace {
+            flex: 1;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Node Palette */
+        #node-palette {
+            width: 80px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 20px 12px;
+        }
+
+        .palette-item {
+            width: 56px;
+            height: 56px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 2px solid rgba(59, 130, 246, 0.3);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .palette-item:hover {
+            background: rgba(59, 130, 246, 0.2);
+            transform: scale(1.05);
+        }
+
+        .palette-item i {
+            font-size: 28px;
+            color: var(--primary);
+        }
+
+        /* Canvas */
+        #canvas-container {
+            flex: 1;
+            position: relative;
+            background: var(--bg-primary);
+        }
+
+        #network-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Properties Panel */
+        #properties-panel {
+            width: 360px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .panel-title {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-tertiary);
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-mute);
+            transition: all 0.2s;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+            background: var(--bg-secondary);
+        }
+
+        .tab-content {
+            display: none;
+            padding: 20px;
+            overflow-y: auto;
+            flex: 1;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-mute);
+            margin-bottom: 6px;
+        }
+
+        .styled-input {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 14px;
+        }
+
+        .styled-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Terminal */
+        #terminal-panel {
+            position: fixed;
+            bottom: 0;
+            left: 80px;
+            right: 360px;
+            height: 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            transition: height 0.3s;
+            display: flex;
+            flex-direction: column;
+            z-index: 100;
+        }
+
+        #terminal-panel.open {
+            height: 300px;
+        }
+
+        .terminal-header {
+            padding: 10px 16px;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .terminal-content {
+            flex: 1;
+            padding: 12px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            overflow-y: auto;
+            background: #1a1a1a;
+        }
+
+        /* Resizers */
+        .resizer-h {
+            height: 4px;
+            background: var(--border);
+            cursor: ns-resize;
+            position: relative;
+        }
+
+        .resizer-h:hover {
+            background: var(--primary);
+        }
+
+        .resizer-v {
+            width: 4px;
+            background: var(--border);
+            cursor: ew-resize;
+        }
+
+        .resizer-v:hover {
+            background: var(--primary);
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px 20px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            z-index: 1000;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Empty State */
+        #panel-empty {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-mute);
+            padding: 40px;
+            text-align: center;
+        }
+
+        #panel-empty i {
+            font-size: 64px;
+            margin-bottom: 16px;
+            opacity: 0.3;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        table th {
+            background: var(--bg-tertiary);
+            padding: 8px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-mute);
+            border-bottom: 1px solid var(--border);
+        }
+
+        table td {
+            padding: 8px;
+            font-size: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .actions {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <!-- Toolbar -->
+        <div id="toolbar">
+            <div class="logo">
+                <i class="material-icons-round">hub</i>
+                NET-sim
+            </div>
+
+            <div class="tools">
+                <button class="tool-btn active" id="tool-select" onclick="switchTool('select')">
+                    <i class="material-icons-round">near_me</i> Select
+                </button>
+                <button class="tool-btn" id="tool-link" onclick="switchTool('link')">
+                    <i class="material-icons-round">timeline</i> Link
+                </button>
+                <button class="tool-btn" id="tool-pan" onclick="switchTool('pan')">
+                    <i class="material-icons-round">pan_tool</i> Pan
+                </button>
+            </div>
+
+            <div class="actions" style="display: flex; gap: 12px; padding: 0 20px; border: none;">
+                <button class="btn btn-primary" onclick="autoConfigureRouting()"
+                    style="background: var(--secondary); white-space: nowrap;">
+                    <i class="material-icons-round">alt_route</i> Auto-Route
+                </button>
+                <button class="btn btn-danger" onclick="resetSimulation()" style="width: auto; white-space: nowrap;">
+                    <i class="material-icons-round">refresh</i> Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- Workspace -->
+        <div id="workspace">
+            <!-- Node Palette -->
+            <div id="node-palette">
+                <div class="palette-item" title="Add Host" onclick="addNodeToTopology('host')">
+                    <i class="material-icons-round">computer</i>
+                </div>
+                <div class="palette-item" title="Add Router" onclick="addNodeToTopology('router')">
+                    <i class="material-icons-round">router</i>
+                </div>
+                <div class="palette-item" title="Add Switch" onclick="addNodeToTopology('switch')">
+                    <i class="material-icons-round">hub</i>
+                </div>
+                <div class="palette-item" title="Add DNS Server" onclick="addNodeToTopology('dns_server')">
+                    <i class="material-icons-round">dns</i>
+                </div>
+                <div class="palette-item" title="Add Server" onclick="addNodeToTopology('server')">
+                    <i class="material-icons-round">storage</i>
+                </div>
+
+                <div style="height: 1px; background: var(--border); margin: 8px 4px;"></div>
+
+                <div class="palette-item" title="Star Topology" onclick="createTopology('star')">
+                    <i class="material-icons-round">hub</i>
+                </div>
+                <div class="palette-item" title="Mesh Topology" onclick="createTopology('mesh')">
+                    <i class="material-icons-round">share</i>
+                </div>
+                <div class="palette-item" title="Ring Topology" onclick="createTopology('ring')">
+                    <i class="material-icons-round">sync</i>
+                </div>
+                <div class="palette-item" title="Bus Topology" onclick="createTopology('bus')">
+                    <i class="material-icons-round">linear_scale</i>
+                </div>
+            </div>
+
+            <div class="resizer-v" id="left-resizer"></div>
+
+            <!-- Canvas -->
+            <div id="canvas-container">
+                <div id="network-canvas"></div>
+            </div>
+
+            <div class="resizer-v" id="sidebar-resizer"></div>
+
+            <!-- Properties Panel -->
+            <div id="properties-panel">
+                <div class="panel-header">
+                    <span class="panel-title">Properties</span>
+                </div>
+
+                <div id="panel-empty">
+                    <i class="material-icons-round">info</i>
+                    <p>Select a node or link to view properties</p>
+                </div>
+
+                <div id="panel-content" style="display: none; flex-direction: column; height: 100%;">
+                    <div class="tabs">
+                        <div class="tab active" id="tab-props" onclick="switchTab('props')">Properties</div>
+                        <div class="tab" id="tab-inspect" onclick="switchTab('inspect')">Inspect</div>
+                        <div class="tab" id="tab-corruption" onclick="switchTab('corruption')">Corruption</div>
+                        <div class="tab" id="tab-monitor" onclick="switchTab('monitor')">Monitor</div>
+                    </div>
+
+                    <!-- Properties Tab -->
+                    <div class="tab-content active" id="content-props" style="flex: 1; overflow-y: auto;">
+                        <div class="input-group">
+                            <label>Type</label>
+                            <span id="prop-type-badge"
+                                style="display: inline-block; padding: 4px 12px; background: var(--primary); border-radius: 4px; font-size: 11px; font-weight: 600;">HOST</span>
+                        </div>
+                        <div class="input-group">
+                            <label>ID</label>
+                            <input type="text" class="styled-input" id="prop-id" readonly>
+                        </div>
+                        <div class="input-group">
+                            <label>Hostname</label>
+                            <input type="text" class="styled-input" id="prop-hostname">
+                        </div>
+                        <div class="input-group">
+                            <label>Default Gateway</label>
+                            <input type="text" class="styled-input" id="prop-gateway">
+                        </div>
+                        <div class="input-group">
+                            <label>Interfaces</label>
+                            <div id="prop-interfaces"></div>
+                        </div>
+                    </div>
+
+                    <!-- Inspect Tab -->
+                    <div class="tab-content" id="content-inspect" style="flex: 1; overflow-y: auto;">
+                        <h4 style="margin-bottom: 12px;">ARP Cache</h4>
+                        <table id="arp-table">
+                            <thead>
+                                <tr>
+                                    <th>IP</th>
+                                    <th>MAC</th>
+                                    <th>Age</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
+                        <h4 style="margin: 20px 0 12px;">Routing Table</h4>
+                        <table id="route-table">
+                            <thead>
+                                <tr>
+                                    <th>Destination</th>
+                                    <th>Gateway</th>
+                                    <th>Interface</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
+                        <h4 style="margin: 20px 0 12px;">Active Sockets</h4>
+                        <table id="socket-table">
+                            <thead>
+                                <tr>
+                                    <th>Proto</th>
+                                    <th>Local</th>
+                                    <th>Remote</th>
+                                    <th>State</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+
+                        <div id="router-only-features"
+                            style="display: none; margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border);">
+                            <h4 style="margin-bottom: 12px;">Add Static Route</h4>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <input type="text" id="route-dest" placeholder="Destination (e.g., 10.0.3.0/24)"
+                                    class="styled-input">
+                                <input type="text" id="route-gw" placeholder="Gateway IP" class="styled-input">
+                                <button class="btn btn-primary" style="margin-top: 4px;" onclick="addStaticRoute()">
+                                    <i class="material-icons-round">add_road</i> Add Route
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Corruption Tab -->
+                    <div class="tab-content" id="content-corruption" style="flex: 1; overflow-y: auto;">
+                        <h4 style="margin-bottom: 12px;">Node Failures</h4>
+                        <button id="btn-toggle-icmp" class="btn btn-danger" style="margin-bottom: 8px;"
+                            onclick="toggleICMP()">
+                            <i class="material-icons-round">block</i> Block ICMP
+                        </button>
+                        <button id="btn-toggle-silent" class="btn btn-danger" style="margin-bottom: 20px;"
+                            onclick="toggleSilentMode()">
+                            <i class="material-icons-round">volume_off</i> Silent Mode
+                        </button>
+
+                        <h4 style="margin-bottom: 12px;">Interface Control</h4>
+                        <div id="fault-interfaces"></div>
+                    </div>
+
+                    <!-- Monitor Tab -->
+                    <div class="tab-content" id="content-monitor" style="flex: 1; overflow-y: auto;">
+                        <h4 style="margin-bottom: 12px;">Hop-by-Hop Monitor</h4>
+                        <div id="monitor-log" style="font-size: 11px; font-family: monospace;"></div>
+                    </div>
+
+                    <!-- Node Actions -->
+                    <div class="actions" id="node-actions">
+                        <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px;"
+                            onclick="openTerminal()">
+                            <i class="material-icons-round">terminal</i> Terminal
+                        </button>
+                        <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px;"
+                            onclick="saveNodeProperties()">
+                            <i class="material-icons-round">save</i> Save Changes
+                        </button>
+                        <button id="btn-save-link" class="btn btn-primary"
+                            style="width: 100%; margin-bottom: 12px; display: none;" onclick="saveLinkProperties()">
+                            <i class="material-icons-round">save</i> Save Link Changes
+                        </button>
+                        <button id="btn-delete-node" class="btn btn-danger" style="width: 100%;"
+                            onclick="deleteSelectedNode()">
+                            <i class="material-icons-round">delete</i> Delete Node
+                        </button>
+                        <button id="btn-delete-link" class="btn btn-danger" style="width: 100%; display: none;"
+                            onclick="deleteSelectedLink()">
+                            <i class="material-icons-round">delete</i> Delete Link
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="resizer-h" id="terminal-resizer"></div>
+
+        <!-- Terminal Panel -->
+        <div id="terminal-panel">
+            <div class="terminal-header">
+                <span class="terminal-tab">> TTY: <span id="term-title-name">host-1</span></span>
+                <i class="material-icons-round close-term" onclick="toggleTerminal()">close</i>
+            </div>
+            <div class="terminal-content" id="terminal-container">
+                <!-- xterm.js terminal will be mounted here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="static/terminal.js"></script>
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+        let network = null;
+        let nodesDataSet = null;
+        let edgesDataSet = null;
+        let currentTool = 'select';
+        let linkSource = null;
+        let selectedNodeId = null;
+        let selectedNodeData = null;
+        let selectedLinkId = null;
+        let terminalManager = null;
+
+
+
+        // Initialize
+        window.addEventListener('DOMContentLoaded', () => {
+            initNetwork();
+            initWebSocket();
+            fetchState();
+
+            // Initialize terminal manager
+            terminalManager = new TerminalManager();
+            window.terminalManager = terminalManager;
+
+            // Periodic refresh
+            setInterval(fetchState, 5000);
+        });
+
+        function initNetwork() {
+            const container = document.getElementById('network-canvas');
+            nodesDataSet = new vis.DataSet([]);
+            edgesDataSet = new vis.DataSet([]);
+
+            const data = { nodes: nodesDataSet, edges: edgesDataSet };
+            const options = {
+                nodes: {
+                    shape: 'icon',
+                    icon: {
+                        face: 'Material Icons Round',
+                        size: 35,
+                        color: '#3b82f6',
+                        weight: 'normal'
+                    },
+                    font: {
+                        size: 12,
+                        color: '#94a3b8',
+                        face: 'Inter'
+                    }
+                },
+                edges: {
+                    color: { color: '#475569', highlight: '#3b82f6' },
+                    width: 2,
+                    smooth: { type: 'continuous' }
+                },
+                physics: {
+                    enabled: true,
+                    stabilization: {
+                        enabled: true,
+                        iterations: 1000,
+                        updateInterval: 25,
+                        onlyDynamicEdges: false,
+                        fit: true
+                    },
+                    solver: 'forceAtlas2Based',
+                    forceAtlas2Based: {
+                        theta: 0.5,
+                        gravitationalConstant: -50,
+                        centralGravity: 0.01,
+                        springConstant: 0.08,
+                        springLength: 100,
+                        damping: 0.4,
+                        avoidOverlap: 0
+                    }
+                },
+                interaction: {
+                    dragNodes: true,
+                    dragView: true,
+                    zoomView: true,
+                    hover: true
+                }
+            };
+
+            network = new vis.Network(container, data, options);
+
+            // Click handler
+            network.on("click", function (params) {
+                if (params.nodes.length > 0) {
+                    if (currentTool === 'link') {
+                        handleLinkClick(params.nodes[0]);
+                    } else {
+                        selectNode(params.nodes[0]);
+                    }
+                } else if (params.edges.length > 0) {
+                    selectLink(params.edges[0]);
+                } else {
+                    clearSelection();
+                }
+            });
+
+            // Persist positions on dragEnd
+            network.on("dragEnd", function (params) {
+                if (params.nodes.length > 0) {
+                    const nodeId = params.nodes[0];
+                    const positions = network.getPositions([nodeId]);
+                    const pos = positions[nodeId];
+                    if (pos) {
+                        updateNodePosition(nodeId, pos.x, pos.y);
+                    }
+                }
+            });
+
+            // Hover handlers for link preview
+            network.on("hoverNode", function (params) {
+                if (currentTool === 'link' && linkSource && linkSource !== params.node) {
+                    if (edgesDataSet.get('temp-link')) {
+                        edgesDataSet.remove('temp-link');
+                    }
+                    edgesDataSet.add({
+                        id: 'temp-link',
+                        from: linkSource,
+                        to: params.node,
+                        dashes: [5, 5],
+                        color: { color: '#10b981', opacity: 0.5 },
+                        width: 2
+                    });
+                }
+            });
+
+            network.on("blurNode", function (params) {
+                if (edgesDataSet.get('temp-link')) {
+                    edgesDataSet.remove('temp-link');
+                }
+            });
+
+            // Packet Animation Loop
+
+        }
+
+        const iconMap = {
+            host: { code: '\ue30a', color: '#3b82f6' },        // computer
+            router: { code: '\ue328', color: '#8b5cf6' },      // router
+            switch: { code: '\ueb2f', color: '#10b981' },      // hub
+            dns_server: { code: '\ue875', color: '#f59e0b' },  // dns
+            dns: { code: '\ue875', color: '#f59e0b' },         // dns fallback
+            server: { code: '\ue1db', color: '#f43f5e' },      // storage/server
+            device_hub: { code: '\ue335', color: '#10b981' },
+            storage: { code: '\ue1db', color: '#f43f5e' }
+        };
+
+        async function fetchState() {
+            try {
+                // Ensure font is loaded for canvas
+                if (document.fonts) {
+                    await document.fonts.load('12px "Material Icons Round"');
+                }
+
+                const response = await fetch(`${API_URL}/state`);
+                const state = await response.json();
+
+                // --- Batch Node Updates ---
+                const nodeIds = new Set();
+                const nodeUpdates = [];
+
+                state.devices.forEach(n => {
+                    nodeIds.add(n.name);
+
+                    const type = n.type ? n.type.toLowerCase() : 'host';
+                    const iconDef = iconMap[type] || iconMap.host;
+                    const isSelected = selectedNodeId === n.name;
+
+                    // Get IP addresses
+                    let ipLabel = '';
+                    if (n.ip_addresses) {
+                        const ips = Object.values(n.ip_addresses).map(ip => ip.split('/')[0]);
+                        if (ips.length > 0) {
+                            if (n.type === 'router' || n.type === 'switch') {
+                                ipLabel = ips.join('\n');
+                            } else {
+                                ipLabel = ips[0];
+                            }
+                        }
+                    }
+
+                    const label = ipLabel ? `${n.name}\n${ipLabel}` : n.name;
+
+                    const nodeObj = {
+                        id: n.name,
+                        label: label,
+                        icon: {
+                            face: 'Material Icons Round',
+                            code: iconDef.code,
+                            color: isSelected ? '#10b981' : iconDef.color,
+                            size: isSelected ? 45 : 35
+                        },
+                        font: {
+                            size: isSelected ? 14 : 12,
+                            color: isSelected ? '#10b981' : '#94a3b8',
+                            face: 'Inter',
+                            align: 'center',
+                            multi: 'html',
+                            bold: isSelected
+                        },
+                        borderWidth: isSelected ? 3 : 0,
+                        borderWidthSelected: 3,
+                        shapeProperties: { borderDashes: false }
+                    };
+
+                    // Only set x/y if node does not exist to let physics take over
+                    if (!nodesDataSet.get(n.name)) {
+                        nodeObj.x = n.x;
+                        nodeObj.y = n.y;
+                    }
+
+                    nodeUpdates.push(nodeObj);
+                });
+
+                // Batch execute updates
+                nodesDataSet.update(nodeUpdates);
+
+                // Remove deleted nodes
+                const nodesToRemove = [];
+                nodesDataSet.forEach(node => {
+                    if (!nodeIds.has(node.id)) {
+                        nodesToRemove.push(node.id);
+                    }
+                });
+                nodesDataSet.remove(nodesToRemove); // Batch remove
+
+
+                // --- Batch Edge Updates ---
+                const edgeIds = new Set();
+                const edgeUpdates = [];
+
+                state.links.forEach(link => {
+                    const edgeId = link.id;
+                    edgeIds.add(edgeId);
+
+                    const isSelected = selectedLinkId === edgeId;
+
+                    edgeUpdates.push({
+                        id: edgeId,
+                        from: link.device_a,
+                        to: link.device_b,
+                        color: {
+                            color: isSelected ? '#10b981' : '#475569',
+                            highlight: '#10b981'
+                        },
+                        width: isSelected ? 3 : 2,
+                        dashes: link.packet_loss_percent > 0
+                    });
+                });
+
+                // Preserve temp link
+                if (edgesDataSet.get('temp-link')) {
+                    const temp = edgesDataSet.get('temp-link');
+                    edgeUpdates.push(temp);
+                    edgeIds.add('temp-link');
+                }
+
+                edgesDataSet.update(edgeUpdates);
+
+                // Remove deleted edges
+                const edgesToRemove = [];
+                edgesDataSet.forEach(edge => {
+                    if (!edgeIds.has(edge.id)) {
+                        edgesToRemove.push(edge.id);
+                    }
+                });
+                edgesDataSet.remove(edgesToRemove);
+
+            } catch (e) {
+                console.error("Fetch state error:", e);
+            }
+        }
+
+        async function selectNode(nodeId) {
+            selectedNodeId = nodeId;
+            try {
+                const response = await fetch(`${API_URL}/devices/${nodeId}`);
+                if (!response.ok) throw new Error('Device not found');
+                const nodeData = await response.json();
+
+                selectedNodeData = nodeData;
+                // Add device_type fallback because backend might use 'type'
+                if (!selectedNodeData.device_type && selectedNodeData.type) {
+                    selectedNodeData.device_type = selectedNodeData.type;
+                }
+
+                document.getElementById('node-actions').style.display = 'block';
+                // Show node buttons, hide link buttons
+                document.getElementById('btn-save-link').style.display = 'none';
+                document.getElementById('btn-delete-link').style.display = 'none';
+
+                // Show node action buttons
+                const nodeActionBtns = document.querySelectorAll('#node-actions button:not(#btn-save-link):not(#btn-delete-link)');
+                nodeActionBtns.forEach(b => b.style.display = 'block');
+
+                const typeBadge = document.getElementById('prop-type-badge');
+                typeBadge.style.background = 'var(--primary)';
+
+                updatePropertiesPanel(selectedNodeData);
+                fetchState();
+            } catch (e) {
+                console.error('Failed to select node:', e);
+            }
+        }
+
+        async function selectLink(id) {
+            selectedNodeId = null;
+            const response = await fetch(`${API_URL}/state`);
+            const state = await response.json();
+            const link = state.links.find(l => l.id === id);
+            if (link) {
+                link.source_node = link.device_a || link.source_node;
+                link.target_node = link.device_b || link.target_node;
+                link.latency = link.latency_ms || link.latency;
+                link.packet_loss = link.packet_loss_percent || link.packet_loss;
+                updateLinkProperties(link);
+            }
+        }
+
+        function updateLinkProperties(link) {
+            selectedLinkId = link.id;
+            selectedNodeId = null;
+
+            document.getElementById('panel-empty').style.display = 'none';
+            document.getElementById('panel-content').style.display = 'flex';
+            document.getElementById('node-actions').style.display = 'block'; // Container for actions
+
+            // Toggle buttons
+            // Hide node buttons
+            const nodeActionBtns = document.querySelectorAll('#node-actions button:not(#btn-save-link):not(#btn-delete-link)');
+            nodeActionBtns.forEach(b => b.style.display = 'none');
+
+            // Show link buttons
+            document.getElementById('btn-save-link').style.display = 'block';
+            document.getElementById('btn-delete-link').style.display = 'block';
+
+            switchTab('props');
+
+            const typeBadge = document.getElementById('prop-type-badge');
+            typeBadge.innerText = 'LINK';
+            typeBadge.style.background = '#64748b';
+
+            document.getElementById('prop-id').value = link.id;
+
+            document.getElementById('prop-hostname').parentElement.style.display = 'none';
+            document.getElementById('prop-gateway').parentElement.style.display = 'none';
+
+            const container = document.getElementById('prop-interfaces');
+            container.innerHTML = `
+                <div class="input-group">
+                    <label>Source</label>
+                    <input type="text" class="styled-input" value="${link.source_node}" readonly>
+                </div>
+                <div class="input-group">
+                    <label>Target</label>
+                    <input type="text" class="styled-input" value="${link.target_node}" readonly>
+                </div>
+                <div class="input-group">
+                    <label>Latency (ms)</label>
+                    <input type="number" id="link-latency" class="styled-input" value="${link.latency}">
+                </div>
+                <div class="input-group">
+                    <label>Jitter (ms)</label>
+                    <input type="number" id="link-jitter" class="styled-input" value="${link.jitter_ms || 0}">
+                </div>
+                <div class="input-group">
+                    <label>Packet Loss (%)</label>
+                    <input type="number" id="link-loss" class="styled-input" value="${link.packet_loss || 0}">
+                </div>
+            `;
+        }
+
+        async function saveLinkProperties() {
+            if (!selectedLinkId) return;
+
+            const latency = parseFloat(document.getElementById('link-latency').value) || 0;
+            const jitter = parseFloat(document.getElementById('link-jitter').value) || 0;
+            const loss = parseFloat(document.getElementById('link-loss').value) || 0;
+
+            try {
+                const response = await fetch(`${API_URL}/links/${selectedLinkId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        latency_ms: latency,
+                        jitter_ms: jitter,
+                        packet_loss_percent: loss
+                    })
+                });
+
+                if (response.ok) {
+                    showToast("Link properties saved");
+                    await fetchState();
+                } else {
+                    showToast("Failed to save link properties", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to save link properties", 'danger');
+            }
+        }
+
+        function clearSelection() {
+            selectedNodeId = null;
+            selectedLinkId = null;
+            document.getElementById('panel-empty').style.display = 'flex';
+            document.getElementById('panel-content').style.display = 'none';
+            document.getElementById('terminal-panel').classList.remove('open');
+            fetchState();
+        }
+
+        async function deleteSelectedLink() {
+            if (!selectedLinkId) return;
+            await deleteLink(selectedLinkId);
+        }
+
+        function updatePropertiesPanel(node) {
+            if (!node) return;
+
+            // Normailize type
+            if (!node.device_type && node.type) node.device_type = node.type;
+            const deviceType = node.device_type ? node.device_type.toUpperCase() : 'UNKNOWN';
+
+            document.getElementById('panel-empty').style.display = 'none';
+            document.getElementById('panel-content').style.display = 'flex';
+            document.getElementById('panel-content').style.flexDirection = 'column';
+            document.getElementById('panel-content').style.height = '100%';
+            document.getElementById('node-actions').style.display = 'block';
+
+            document.getElementById('prop-hostname').parentElement.style.display = 'block';
+
+            const showGateway = node.device_type === 'host' || node.device_type === 'dns_server';
+            document.getElementById('prop-gateway').parentElement.style.display = showGateway ? 'block' : 'none';
+
+            document.getElementById('prop-type-badge').innerText = deviceType;
+            document.getElementById('prop-id').value = node.name;
+
+            // Real-time update for Hostname
+            const oldHostInput = document.getElementById('prop-hostname');
+            const newHostInput = oldHostInput.cloneNode(true);
+            oldHostInput.parentNode.replaceChild(newHostInput, oldHostInput);
+
+            newHostInput.value = node.name;
+
+            newHostInput.addEventListener('input', (e) => {
+                const val = e.target.value;
+                const cached = nodesDataSet.get(node.name);
+                if (cached) {
+                    // Preserve existing IP info in label
+                    const parts = cached.label.split('\n');
+                    const ipPart = parts.length > 1 ? '\n' + parts.slice(1).join('\n') : '';
+                    nodesDataSet.update({ id: node.name, label: val + ipPart });
+                }
+            });
+
+            newHostInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    saveNodeProperties();
+                    newHostInput.blur();
+                }
+            });
+            // Gateway Input with Enter support
+            const oldGwInput = document.getElementById('prop-gateway');
+            const newGwInput = oldGwInput.cloneNode(true);
+            oldGwInput.parentNode.replaceChild(newGwInput, oldGwInput);
+
+            newGwInput.value = node.default_gateway || '';
+            newGwInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    saveNodeProperties();
+                    newGwInput.blur();
+                }
+            });
+
+            const routerFeatures = document.getElementById('router-only-features');
+            if (routerFeatures) {
+                routerFeatures.style.display = node.device_type === 'router' ? 'block' : 'none';
+            }
+
+            // Gateway Suggestion
+            const gatewayGroup = document.getElementById('prop-gateway').parentElement;
+            let suggestionDiv = document.getElementById('gateway-suggestion');
+            if (!suggestionDiv) {
+                suggestionDiv = document.createElement('div');
+                suggestionDiv.id = 'gateway-suggestion';
+                suggestionDiv.style.fontSize = '11px';
+                suggestionDiv.style.marginTop = '4px';
+                suggestionDiv.style.color = 'var(--primary)';
+                suggestionDiv.style.cursor = 'pointer';
+                gatewayGroup.appendChild(suggestionDiv);
+            }
+            suggestionDiv.innerText = '';
+
+            if (showGateway && !node.default_gateway) {
+                // Find connected routers
+                fetch(`${API_URL}/state`)
+                    .then(res => res.json())
+                    .then(state => {
+                        const connectedLinks = state.links.filter(l => l.device_a === node.name || l.device_b === node.name);
+                        const routerIps = [];
+                        connectedLinks.forEach(l => {
+                            const otherNodeName = l.device_a === node.name ? l.device_b : l.device_a;
+                            const otherNode = state.devices.find(d => d.name === otherNodeName);
+                            if (otherNode && otherNode.type === 'router') {
+                                // Find the IP of the router on the interface connected to this link
+                                const routerIface = l.device_a === otherNodeName ? l.interface_a : l.interface_b;
+                                if (otherNode.ip_addresses && otherNode.ip_addresses[routerIface]) {
+                                    routerIps.push(otherNode.ip_addresses[routerIface].split('/')[0]);
+                                }
+                            }
+                        });
+
+                        if (routerIps.length > 0) {
+                            suggestionDiv.innerText = `Suggest: ${routerIps[0]}`;
+                            suggestionDiv.onclick = () => {
+                                document.getElementById('prop-gateway').value = routerIps[0];
+                                suggestionDiv.innerText = '';
+                            };
+                        }
+                    });
+            }
+
+            const container = document.getElementById('prop-interfaces');
+            container.innerHTML = '';
+
+            const faultContainer = document.getElementById('fault-interfaces');
+            faultContainer.innerHTML = '';
+
+            if (node.interfaces && node.interfaces.length > 0) {
+                node.interfaces.forEach(ifaceName => {
+                    const div = document.createElement('input');
+                    div.className = 'styled-input';
+                    div.style.marginBottom = '5px';
+                    const ipDisplay = node.ip_addresses && node.ip_addresses[ifaceName]
+                        ? node.ip_addresses[ifaceName]
+                        : 'No IP';
+                    div.value = `${ifaceName}: ${ipDisplay}`;
+                    div.readOnly = true;
+                    container.appendChild(div);
+
+                    const row = document.createElement('div');
+                    row.className = 'interface-control';
+                    row.style.display = 'flex';
+                    row.style.gap = '10px';
+                    row.style.alignItems = 'center';
+                    row.style.marginBottom = '10px';
+
+                    const label = document.createElement('div');
+                    label.style.flex = '1';
+                    label.style.fontSize = '13px';
+                    label.style.fontWeight = '500';
+                    label.textContent = ifaceName;
+                    row.appendChild(label);
+
+                    const button = document.createElement('button');
+                    button.id = `btn-iface-${ifaceName}`;
+                    button.className = 'btn btn-success';
+                    button.style.padding = '6px 12px';
+                    button.style.fontSize = '11px';
+                    button.style.fontWeight = '600';
+                    button.style.minWidth = '80px';
+                    button.style.transition = 'all 0.2s ease';
+                    button.onclick = () => toggleInterface(ifaceName, 'up', button);
+                    button.innerHTML = `
+                        <i class="material-icons-round" style="font-size: 14px; vertical-align: middle;">arrow_upward</i>
+                        UP
+                    `;
+                    row.appendChild(button);
+
+                    faultContainer.appendChild(row);
+                });
+            } else {
+                container.innerHTML = '<div style="color: var(--text-mute); font-size: 12px;">No interfaces yet. Create a link to add interfaces.</div>';
+            }
+
+            updateInspectionTables(node);
+            updateFailureControls(node);
+        }
+
+        function switchTab(tab) {
+            ['props', 'inspect', 'corruption', 'monitor'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+                document.getElementById(`content-${t}`).style.display = t === tab ? 'block' : 'none';
+            });
+        }
+
+        function updateInspectionTables(node) {
+            const arpBody = document.querySelector('#arp-table tbody');
+            arpBody.innerHTML = '';
+            const arpEntries = node.arp_cache || [];
+            if (arpEntries.length > 0) {
+                arpEntries.forEach(entry => {
+                    arpBody.innerHTML += `<tr><td>${entry.ip || '*'}</td><td>${entry.mac || '*'}</td><td>${entry.state || 'N/A'}</td></tr>`;
+                });
+            } else {
+                arpBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-mute); font-style: italic; padding: 20px;">No ARP entries yet</td></tr>';
+            }
+
+            const routeBody = document.querySelector('#route-table tbody');
+            routeBody.innerHTML = '';
+            const routes = node.routing_table || [];
+            if (routes.length > 0) {
+                routes.forEach(r => {
+                    routeBody.innerHTML += `<tr><td>${r.destination || r.raw}</td><td>${r.gateway || '*'}</td><td>${r.interface || '*'}</td></tr>`;
+                });
+            } else {
+                routeBody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: var(--text-mute); font-style: italic; padding: 20px;">No routes configured</td></tr>';
+            }
+
+            const socketBody = document.querySelector('#socket-table tbody');
+            socketBody.innerHTML = '';
+            const sockets = node.active_sockets || [];
+            if (sockets.length > 0) {
+                sockets.forEach(s => {
+                    socketBody.innerHTML += `<tr><td>${s.protocol}</td><td>${s.local}</td><td>${s.remote}</td><td>${s.state}</td></tr>`;
+                });
+            } else {
+                socketBody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-mute); font-style: italic; padding: 20px;">No active sockets</td></tr>';
+            }
+        }
+
+        function updateFailureControls(node) {
+            if (!node) return;
+            const activeFailures = node.active_failures || [];
+
+            const icmpBtn = document.getElementById('btn-toggle-icmp');
+            if (icmpBtn) {
+                if (activeFailures.includes('block_icmp')) {
+                    icmpBtn.className = 'btn btn-success';
+                    icmpBtn.innerHTML = '<i class="material-icons-round">check_circle</i> ICMP Blocked';
+                } else {
+                    icmpBtn.className = 'btn btn-danger';
+                    icmpBtn.innerHTML = '<i class="material-icons-round">block</i> Block ICMP';
+                }
+            }
+
+            const silentBtn = document.getElementById('btn-toggle-silent');
+            if (silentBtn) {
+                // Ensure case-insensitive check for router type, handling both 'device_type' and 'type' keys
+                const rawType = node.device_type || node.type || '';
+                const type = rawType.toLowerCase();
+                const isRouter = type === 'router';
+
+                // Always display the button to prevent UI jumping
+                silentBtn.style.display = 'inline-flex';
+                silentBtn.style.width = '100%';
+
+                if (!isRouter) {
+                    // Disable for non-routers
+                    silentBtn.disabled = true;
+                    silentBtn.style.opacity = '0.5';
+                    silentBtn.style.cursor = 'not-allowed';
+                    silentBtn.className = 'btn btn-danger';
+                    silentBtn.innerHTML = '<i class="material-icons-round">volume_off</i> Silent Mode (Routers Only)';
+                } else {
+                    // Enable for routers
+                    silentBtn.disabled = false;
+                    silentBtn.style.opacity = '1';
+                    silentBtn.style.cursor = 'pointer';
+
+                    if (activeFailures.includes('silent_router')) {
+                        silentBtn.className = 'btn btn-success';
+                        silentBtn.innerHTML = '<i class="material-icons-round">check_circle</i> Silent Mode Active';
+                    } else {
+                        silentBtn.className = 'btn btn-danger';
+                        silentBtn.innerHTML = '<i class="material-icons-round">volume_off</i> Silent Mode';
+                    }
+                }
+            }
+        }
+
+        function openTerminal() {
+            if (!selectedNodeId) return;
+
+            if (window.terminalManager) {
+                window.terminalManager.createTerminal(selectedNodeId);
+            }
+
+            const panel = document.getElementById('terminal-panel');
+            panel.classList.add('open');
+
+            let ip = getHostIp();
+            document.getElementById('term-title-name').innerText = `${selectedNodeId} (${ip})`;
+        }
+
+        function getHostIp() {
+            if (!selectedNodeData) return 'no IP';
+
+            if (selectedNodeData.ip_addresses) {
+                const ips = Object.values(selectedNodeData.ip_addresses);
+                if (ips.length > 0) {
+                    return ips[0].split('/')[0];
+                }
+            }
+            return 'no IP';
+        }
+
+        function toggleTerminal() {
+            const panel = document.getElementById('terminal-panel');
+            panel.classList.toggle('open');
+        }
+
+        async function autoConfigureRouting() {
+            try {
+                showToast("Configuring routes...");
+                const response = await fetch(`${API_URL}/auto-route`, { method: 'POST' });
+                if (response.ok) {
+                    showToast("Routing tables updated successfully");
+                    await fetchState();
+                    if (selectedNodeId) {
+                        const nodeRes = await fetch(`${API_URL}/devices/${selectedNodeId}`);
+                        selectedNodeData = await nodeRes.json();
+                        updateInspectionTables(selectedNodeData);
+                    }
+                } else {
+                    showToast("Failed to auto-configure routing", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to auto-configure routing", 'danger');
+            }
+        }
+
+        async function resetSimulation() {
+            if (!confirm('Are you sure you want to reset the entire topology?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/devices`);
+                const data = await response.json();
+
+                for (const device of data.devices) {
+                    await fetch(`${API_URL}/devices/${device.name}`, { method: 'DELETE' });
+                }
+
+                clearSelection();
+                await fetchState();
+                showToast("Topology reset successfully");
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to reset topology", 'danger');
+            }
+        }
+
+        async function saveNodeProperties() {
+            if (!selectedNodeId) return;
+
+            const hostname = document.getElementById('prop-hostname').value;
+            const gateway = document.getElementById('prop-gateway').value;
+
+            try {
+                const response = await fetch(`${API_URL}/devices/${selectedNodeId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify((() => {
+                        const b = { name: hostname };
+                        if (document.getElementById('prop-gateway').parentElement.style.display !== 'none') {
+                            b.default_gateway = gateway;
+                        }
+                        return b;
+                    })())
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.warning) {
+                        showToast(data.warning, 'warning'); // Show warning if present
+                    } else {
+                        showToast("Node properties saved");
+                    }
+                    const newId = data.name || selectedNodeId;
+
+                    // Refresh current node data
+                    const nodeRes = await fetch(`${API_URL}/devices/${newId}`);
+                    selectedNodeId = newId;
+                    selectedNodeData = await nodeRes.json();
+
+                    updatePropertiesPanel(selectedNodeData);
+                    await fetchState();
+                } else {
+                    const error = await response.json();
+                    showToast(error.detail || "Failed to save properties", 'danger');
+                    // Revert UI change
+                    await fetchState();
+                    if (selectedNodeData) updatePropertiesPanel(selectedNodeData);
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to save properties: " + e.message, 'danger');
+                // Revert UI change
+                await fetchState();
+                if (selectedNodeData) updatePropertiesPanel(selectedNodeData);
+            }
+        }
+
+        async function toggleICMP() {
+            if (!selectedNodeId) return;
+
+            try {
+                // Determine action based on current state (green = active = unblock, red = inactive = block)
+                const icmpBtn = document.getElementById('btn-toggle-icmp');
+                const isCurrentlyBlocked = icmpBtn.classList.contains('btn-success');
+                const method = isCurrentlyBlocked ? 'DELETE' : 'POST';
+                const url = isCurrentlyBlocked
+                    ? `${API_URL}/failures/${selectedNodeId}/block_icmp`
+                    : `${API_URL}/failures`;
+
+                const body = isCurrentlyBlocked ? undefined : JSON.stringify({
+                    device: selectedNodeId,
+                    failure_type: 'block_icmp'
+                });
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: isCurrentlyBlocked ? {} : { 'Content-Type': 'application/json' },
+                    body: body
+                });
+
+                if (response.ok) {
+                    const msg = isCurrentlyBlocked ? "ICMP Unblocked" : "ICMP Blocked";
+                    showToast(msg, 'success');
+
+                    // Refresh node data to update UI
+                    fetchState(); // fetches all, updates selectedNodeData if selected
+
+                    // Manually trigger immediate UI update if waiting for fetchState is too slow
+                    // But fetchState runs every 5s anyway. Let's force a fetch for the specific node.
+                    const nodeRes = await fetch(`${API_URL}/devices/${selectedNodeId}`);
+                    selectedNodeData = await nodeRes.json();
+                    updateFailureControls(selectedNodeData);
+                } else {
+                    showToast("Failed to toggle ICMP", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to toggle ICMP: " + e.message, 'danger');
+            }
+        }
+
+        async function toggleSilentMode() {
+            if (!selectedNodeId) return;
+
+            try {
+                const silentBtn = document.getElementById('btn-toggle-silent');
+                const isCurrentlySilent = silentBtn.classList.contains('btn-success');
+                const method = isCurrentlySilent ? 'DELETE' : 'POST';
+                const url = isCurrentlySilent
+                    ? `${API_URL}/failures/${selectedNodeId}/silent_router`
+                    : `${API_URL}/failures`;
+
+                const body = isCurrentlySilent ? undefined : JSON.stringify({
+                    device: selectedNodeId,
+                    failure_type: 'silent_router'
+                });
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: isCurrentlySilent ? {} : { 'Content-Type': 'application/json' },
+                    body: body
+                });
+
+                if (response.ok) {
+                    const msg = isCurrentlySilent ? "Silent Mode Disabled" : "Silent Mode Enabled";
+                    showToast(msg, 'success');
+
+                    // Refresh node data to update UI
+                    const nodeRes = await fetch(`${API_URL}/devices/${selectedNodeId}`);
+                    selectedNodeData = await nodeRes.json();
+                    updateFailureControls(selectedNodeData);
+                } else {
+                    showToast("Failed to toggle silent mode", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to toggle silent mode", 'danger');
+            }
+        }
+
+        async function addStaticRoute() {
+            if (!selectedNodeId) return;
+
+            const dest = document.getElementById('route-dest').value.trim();
+            const gw = document.getElementById('route-gw').value.trim();
+
+            if (!dest || !gw) {
+                showToast("Please provide both destination and gateway", "danger");
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/routes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        device: selectedNodeId,
+                        destination: dest,
+                        gateway: gw
+                    })
+                });
+
+                if (response.ok) {
+                    showToast("Route added successfully");
+                    document.getElementById('route-dest').value = '';
+                    document.getElementById('route-gw').value = '';
+
+                    // Refresh data
+                    const nodeRes = await fetch(`${API_URL}/devices/${selectedNodeId}`);
+                    selectedNodeData = await nodeRes.json();
+                    updateInspectionTables(selectedNodeData);
+                } else {
+                    const err = await response.json();
+                    showToast(err.detail || "Failed to add route", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to add route", 'danger');
+            }
+        }
+
+        async function toggleInterface(ifaceName, currentState, buttonElement) {
+            if (!selectedNodeId) return;
+
+            const newState = currentState === 'up' ? 'down' : 'up';
+
+            try {
+                const response = await fetch(`${API_URL}/failures/interface/${selectedNodeId}/${ifaceName}/${newState}`, {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    if (newState === 'up') {
+                        buttonElement.className = 'btn btn-success';
+                        buttonElement.innerHTML = `
+                            <i class="material-icons-round" style="font-size: 14px; vertical-align: middle;">arrow_upward</i>
+                            UP
+                        `;
+                        buttonElement.onclick = () => toggleInterface(ifaceName, 'up', buttonElement);
+                    } else {
+                        buttonElement.className = 'btn btn-danger';
+                        buttonElement.innerHTML = `
+                            <i class="material-icons-round" style="font-size: 14px; vertical-align: middle;">arrow_downward</i>
+                            DOWN
+                        `;
+                        buttonElement.onclick = () => toggleInterface(ifaceName, 'down', buttonElement);
+                    }
+                    showToast(`Interface ${ifaceName} set to ${newState.toUpperCase()}`);
+                } else {
+                    showToast(`Failed to set interface ${newState}`, 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast(`Failed to set interface ${newState}`, 'danger');
+            }
+        }
+
+        async function deleteSelectedNode() {
+            if (!selectedNodeId) return;
+
+            if (!confirm(`Are you sure you want to delete ${selectedNodeId}?`)) return;
+
+            try {
+                const response = await fetch(`${API_URL}/devices/${selectedNodeId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showToast("Node deleted");
+                    clearSelection();
+                    await fetchState();
+                } else {
+                    showToast("Failed to delete node", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to delete node", 'danger');
+            }
+        }
+
+        async function deleteLink(linkId) {
+            if (!confirm("Are you sure you want to delete this link?")) return;
+
+            try {
+                const response = await fetch(`${API_URL}/links/${linkId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    showToast("Link deleted");
+                    clearSelection();
+                    await fetchState();
+                } else {
+                    showToast("Failed to delete link", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to delete link", 'danger');
+            }
+        }
+
+        async function addNodeToTopology(type) {
+            const name = prompt(`Enter ${type} name:`);
+            if (!name) return;
+
+            try {
+                await fetch(`${API_URL}/devices`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, device_type: type })
+                });
+
+                await fetchState();
+                showToast(`${type} created`);
+
+                // Trigger animation
+                if (network) {
+                    network.setOptions({ physics: { enabled: true } });
+                    setTimeout(() => {
+                        network.setOptions({ physics: { enabled: false } });
+                    }, 2000);
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to create node", 'danger');
+            }
+        }
+
+        async function createTopology(type) {
+            const count = prompt(`Enter number of devices for ${type} topology:`);
+            if (!count || isNaN(count)) return;
+
+            try {
+                const response = await fetch(`${API_URL}/topologies`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ type, device_count: parseInt(count) })
+                });
+
+                if (response.ok) {
+                    showToast(`${type} topology created`);
+                    setTimeout(() => fetchState(), 500);
+
+                    // Trigger animation
+                    if (network) {
+                        network.setOptions({ physics: { enabled: true } });
+                        setTimeout(() => {
+                            network.setOptions({ physics: { enabled: false } });
+                        }, 2500);
+                    }
+                } else {
+                    const err = await response.json();
+                    showToast(err.detail || "Failed to create topology", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to create topology", 'danger');
+            }
+        }
+
+        async function updateNodePosition(id, x, y) {
+            try {
+                await fetch(`${API_URL}/devices/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ x: Math.round(x), y: Math.round(y) })
+                });
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function handleLinkClick(nodeId) {
+            if (!linkSource) {
+                linkSource = nodeId;
+                showToast("Select target node");
+                fetchState();
+            } else {
+                if (linkSource === nodeId) {
+                    showToast("Cannot link node to itself", 'danger');
+                    linkSource = null;
+                    if (edgesDataSet.get('temp-link')) {
+                        edgesDataSet.remove('temp-link');
+                    }
+                    fetchState();
+                    return;
+                }
+
+                createLink(linkSource, nodeId);
+                linkSource = null;
+                if (edgesDataSet.get('temp-link')) {
+                    edgesDataSet.remove('temp-link');
+                }
+                fetchState();
+            }
+        }
+
+        async function createLink(source, target) {
+            try {
+                const response = await fetch(`${API_URL}/links`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        device_a: source,
+                        device_b: target,
+                        latency_ms: 10,
+                        bandwidth_mbps: 100,
+                        packet_loss_percent: 0
+                    })
+                });
+
+                if (response.ok) {
+                    showToast("Link created");
+                    setTimeout(() => fetchState(), 500);
+                } else {
+                    showToast("Failed to create link", 'danger');
+                }
+            } catch (e) {
+                console.error(e);
+                showToast("Failed to create link", 'danger');
+            }
+        }
+
+        function switchTool(tool) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`tool-${tool}`).classList.add('active');
+
+            if (tool !== 'link') {
+                if (linkSource) {
+                    linkSource = null;
+                    if (edgesDataSet.get('temp-link')) {
+                        edgesDataSet.remove('temp-link');
+                    }
+                    fetchState();
+                }
+            }
+
+            if (tool === 'link') {
+                if (network) network.setOptions({ interaction: { dragNodes: false, dragView: true } });
+                showToast("Link Mode: Click source node, then target node");
+            } else if (tool === 'pan') {
+                if (network) network.setOptions({ interaction: { dragNodes: false, dragView: true } });
+            } else {
+                if (network) network.setOptions({ interaction: { dragNodes: true, dragView: true } });
+            }
+        }
+
+        let packetHistory = [];
+        const MAX_HISTORY = 50;
+
+        function initWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws/packets`;
+
+            const socket = new WebSocket(wsUrl);
+
+            socket.onopen = () => console.log('WebSocket connected');
+            socket.onmessage = (event) => {
+                const packet = JSON.parse(event.data);
+
+                // --- Log Logic ---
+                packetHistory.unshift(packet);
+                if (packetHistory.length > MAX_HISTORY) {
+                    packetHistory.pop();
+                }
+
+                const monitor = document.getElementById('monitor-log');
+                if (monitor) {
+                    // Only rebuild if tab is active to save DOM ops? 
+                    // No, rebuild always so it's ready. Optimization: only update first child?
+                    // Let's keep simple full rebuild for now or simplified prepend.
+
+                    const row = document.createElement('div');
+                    row.style.marginBottom = '8px';
+                    row.style.borderLeft = `2px solid ${packet.protocol === 'ICMP' ? '#3b82f6' : '#10b981'}`;
+                    row.style.paddingLeft = '10px';
+                    row.style.fontSize = '11px';
+
+                    const time = new Date(packet.timestamp * 1000).toLocaleTimeString();
+
+                    row.innerHTML = `
+                        <div style="color:#eee;"><b>[${packet.protocol}]</b> ${packet.packet_type} <span style="color:#64748b; font-size:9px;">${time}</span></div>
+                        <div style="color:#94a3b8; font-size:10px;">
+                            ${packet.namespace}:${packet.interface} | ${packet.src_ip || '?'} &rarr; ${packet.dst_ip || '?'}
+                        </div>
+                        ${packet.ttl ? `<div style="font-size:9px; color:#64748b">TTL: ${packet.ttl}</div>` : ''}
+                    `;
+
+                    monitor.insertBefore(row, monitor.firstChild);
+                    if (monitor.children.length > MAX_HISTORY) {
+                        monitor.removeChild(monitor.lastChild);
+                    }
+                }
+            };
+            socket.onclose = () => setTimeout(initWebSocket, 2000);
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.style.background = type === 'danger' ? 'var(--danger)' : 'var(--success)';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
+
+        // Resizer logic
+        let isResizingSidebar = false;
+        let isResizingTerminal = false;
+        let isResizingLeft = false;
+        let startX = 0;
+        let startY = 0;
+        let startWidth = 0;
+        let startHeight = 0;
+        let startLeftWidth = 0;
+
+        document.getElementById('sidebar-resizer').addEventListener('mousedown', (e) => {
+            isResizingSidebar = true;
+            startX = e.clientX;
+            startWidth = document.getElementById('properties-panel').offsetWidth;
+            e.preventDefault();
+        });
+
+        document.getElementById('left-resizer').addEventListener('mousedown', (e) => {
+            isResizingLeft = true;
+            startX = e.clientX;
+            startLeftWidth = document.getElementById('node-palette').offsetWidth;
+            e.preventDefault();
+        });
+
+        document.getElementById('terminal-resizer').addEventListener('mousedown', (e) => {
+            isResizingTerminal = true;
+            startY = e.clientY;
+            startHeight = document.getElementById('terminal-panel').offsetHeight;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isResizingSidebar) {
+                const delta = startX - e.clientX;
+                const newWidth = Math.max(280, Math.min(600, startWidth + delta));
+                document.getElementById('properties-panel').style.width = newWidth + 'px';
+                document.getElementById('terminal-panel').style.right = newWidth + 'px';
+            }
+            if (isResizingLeft) {
+                const delta = e.clientX - startX;
+                const newWidth = Math.max(60, Math.min(200, startLeftWidth + delta));
+                document.getElementById('node-palette').style.width = newWidth + 'px';
+                document.getElementById('terminal-panel').style.left = newWidth + 'px';
+            }
+            if (isResizingTerminal) {
+                const delta = startY - e.clientY;
+                const newHeight = Math.max(100, Math.min(600, startHeight + delta));
+                document.getElementById('terminal-panel').style.height = newHeight + 'px';
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isResizingSidebar = false;
+            isResizingTerminal = false;
+            isResizingLeft = false;
+        });
+    </script>
+</body>
+
+</html>
